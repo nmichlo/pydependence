@@ -115,6 +115,9 @@ dependencies = [
     #     ← pydependence._cli
     "stdlib_list",
     #     ← pydependence._core.builtin
+    "tomlkit",
+    #     ← pydependence._core.requirements_out
+    #     ← pydependence._core.utils
     "typing-extensions",
     #     ← pydependence._cli
 ]
@@ -149,9 +152,9 @@ test = [
     #     ← tests.test_utils
     "stdlib_list",
     #     ← pydependence._core.builtin
-    "tomlkit", # [L]
-    #     ← [L] pydependence._core.requirements_out
-    #     ← [L] pydependence._core.utils
+    "tomlkit",
+    #     ← pydependence._core.requirements_out
+    #     ← pydependence._core.utils
     #     ← [L] tests.test_module_data
     "typing-extensions",
     #     ← pydependence._cli
@@ -167,6 +170,9 @@ some = [
     #     ← pydependence._cli
     "stdlib_list",
     #     ← pydependence._core.builtin
+    "tomlkit",
+    #     ← pydependence._core.requirements_out
+    #     ← pydependence._core.utils
     "typing-extensions",
     #     ← pydependence._cli
 ]
@@ -181,9 +187,9 @@ all = [
     #     ← pydependence._cli
     "stdlib_list",
     #     ← pydependence._core.builtin
-    "tomlkit", # [L]
-    #     ← [L] pydependence._core.requirements_out
-    #     ← [L] pydependence._core.utils
+    "tomlkit",
+    #     ← pydependence._core.requirements_out
+    #     ← pydependence._core.utils
     "typing-extensions",
     #     ← pydependence._cli
 ]
@@ -194,9 +200,9 @@ core = [
     #     ← pydependence._core.modules_scope
     "stdlib_list",
     #     ← pydependence._core.builtin
-    "tomlkit", # [L]
-    #     ← [L] pydependence._core.requirements_out
-    #     ← [L] pydependence._core.utils
+    "tomlkit",
+    #     ← pydependence._core.requirements_out
+    #     ← pydependence._core.utils
 ]
 example-core-no-lazy = [
     # [AUTOGEN] by pydependence resolver 'example-core-no-lazy' **DO NOT EDIT** [AUTOGEN]
@@ -209,6 +215,9 @@ example-core-no-lazy = [
     #     ← pydependence._cli
     "stdlib_list",
     #     ← pydependence._core.builtin
+    "tomlkit",
+    #     ← pydependence._core.requirements_out
+    #     ← pydependence._core.utils
     "typing-extensions",
     #     ← pydependence._cli
 ]
@@ -223,9 +232,9 @@ example-legacy = [
     #     ← pydependence._cli
     "stdlib_list",
     #     ← pydependence._core.builtin
-    "tomlkit", # [L]
-    #     ← [L] pydependence._core.requirements_out
-    #     ← [L] pydependence._core.utils
+    "tomlkit",
+    #     ← pydependence._core.requirements_out
+    #     ← pydependence._core.utils
     "typing-extensions",
     #     ← pydependence._cli
 ]
