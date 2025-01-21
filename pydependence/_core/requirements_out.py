@@ -27,6 +27,10 @@ import dataclasses
 from collections import defaultdict
 from typing import List, NamedTuple, Optional, Tuple
 
+import tomlkit
+import tomlkit.container
+import tomlkit.items
+
 # ========================================================================= #
 # REQUIREMENTS MAPPER                                                       #
 # ========================================================================= #
@@ -185,10 +189,6 @@ class OutMappedRequirements:
         sources_annotations: bool = True,
         indent_size: int = 4,
     ):
-        import tomlkit
-        import tomlkit.container
-        import tomlkit.items
-
         # create table
         array = tomlkit.array().multiline(True)
         if notice:
