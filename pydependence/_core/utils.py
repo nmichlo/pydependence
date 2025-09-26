@@ -1,29 +1,18 @@
-# ============================================================================== #
-# MIT License                                                                    #
-#                                                                                #
-# Copyright (c) 2024 Nathan Juraj Michlo                                         #
-#                                                                                #
-# Permission is hereby granted, free of charge, to any person obtaining a copy   #
-# of this software and associated documentation files (the "Software"), to deal  #
-# in the Software without restriction, including without limitation the rights   #
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell      #
-# copies of the Software, and to permit persons to whom the Software is          #
-# furnished to do so, subject to the following conditions:                       #
-#                                                                                #
-# The above copyright notice and this permission notice shall be included in all #
-# copies or substantial portions of the Software.                                #
-#                                                                                #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR     #
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,       #
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE    #
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER         #
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,  #
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE  #
-# SOFTWARE.                                                                      #
-# ============================================================================== #
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2024 Nathan Juraj Michlo
+
+__all__ = [
+    "assert_valid_module_path",
+    "assert_valid_import_name",
+    "apply_root_to_path_str",
+    "load_toml_document",
+]
 
 from pathlib import Path
-from typing import List, Union
+from typing import List, TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    import tomlkit
 
 # ========================================================================= #
 # AST IMPORT PARSER                                                         #
@@ -99,9 +88,9 @@ def load_toml_document(
         raise FileNotFoundError(f"path is not a file: {path}")
     with open(path) as fp:
         toml = tomlkit.load(fp)
-        assert isinstance(
-            toml, tomlkit.toml_document.TOMLDocument
-        ), f"got {type(toml)}, not TOMLDocument"
+        assert isinstance(toml, tomlkit.toml_document.TOMLDocument), (
+            f"got {type(toml)}, not TOMLDocument"
+        )
     return toml
 
 
@@ -135,9 +124,9 @@ def toml_file_replace_array(
     # TODO: this needs multiple loads and writes if we are modifying multiple arrays
     #       which is not ideal... but it is a simple solution for now.
 
-    assert isinstance(
-        array, tomlkit.items.Array
-    ), f"array must be a tomlkit Array, got: {type(array)}"
+    assert isinstance(array, tomlkit.items.Array), (
+        f"array must be a tomlkit Array, got: {type(array)}"
+    )
 
     # load file
     file = Path(file)
@@ -168,11 +157,3 @@ def toml_file_replace_array(
 # ========================================================================= #
 # END                                                                       #
 # ========================================================================= #
-
-
-__all__ = (
-    "assert_valid_module_path",
-    "assert_valid_import_name",
-    "apply_root_to_path_str",
-    "load_toml_document",
-)

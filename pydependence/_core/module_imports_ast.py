@@ -1,27 +1,11 @@
-# ============================================================================== #
-# MIT License                                                                    #
-#                                                                                #
-# Copyright (c) 2024 Nathan Juraj Michlo                                         #
-#                                                                                #
-# Permission is hereby granted, free of charge, to any person obtaining a copy   #
-# of this software and associated documentation files (the "Software"), to deal  #
-# in the Software without restriction, including without limitation the rights   #
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell      #
-# copies of the Software, and to permit persons to whom the Software is          #
-# furnished to do so, subject to the following conditions:                       #
-#                                                                                #
-# The above copyright notice and this permission notice shall be included in all #
-# copies or substantial portions of the Software.                                #
-#                                                                                #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR     #
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,       #
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE    #
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER         #
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,  #
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE  #
-# SOFTWARE.                                                                      #
-# ============================================================================== #
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2024 Nathan Juraj Michlo
 
+__all__ = [
+    "load_imports_from_module_info",
+    "LocImportInfo",
+    "ImportSourceEnum",
+]
 
 import ast
 import dataclasses
@@ -29,7 +13,7 @@ import sys
 import warnings
 from collections import Counter, defaultdict
 from enum import Enum
-from typing import DefaultDict, Dict, List, Literal, NamedTuple, Optional, Tuple
+from typing import DefaultDict, Dict, List, Literal, Optional
 
 from pydependence._core.module_data import ModuleMetadata
 from pydependence._core.utils import assert_valid_import_name, assert_valid_module_path
@@ -217,7 +201,7 @@ class LocImportInfo(BasicImportInfo):
     # debug
     lineno: int
     col_offset: int
-    stack_type_names: Tuple[str, ...]
+    stack_type_names: tuple[str, ...]
     # relative import
     is_relative: bool
 
@@ -231,7 +215,6 @@ class LocImportInfo(BasicImportInfo):
 
 
 class _AstImportsCollector(ast.NodeVisitor):
-
     def __init__(self, module_info: ModuleMetadata):
         self._module_info: ModuleMetadata = module_info
         self._imports: "DefaultDict[str, List[LocImportInfo]]" = defaultdict(list)
@@ -387,7 +370,7 @@ class _AstImportsCollector(ast.NodeVisitor):
             return
         # - make sure no keyword arguments are used, these invalidate the import.
         if node.keywords:
-            self._node_warn(node, f"should not have keyword arguments.")
+            self._node_warn(node, "should not have keyword arguments.")
             return
         # - make sure that the function is called with a single string argument
         if not len(node.args) == 1:
@@ -470,13 +453,6 @@ def load_imports_from_module_info(
 # ========================================================================= #
 # END                                                                       #
 # ========================================================================= #
-
-
-__all__ = (
-    "load_imports_from_module_info",
-    "LocImportInfo",
-    "ImportSourceEnum",
-)
 
 
 # PYTHON VERSION: 3.10

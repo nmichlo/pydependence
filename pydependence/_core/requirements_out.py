@@ -1,31 +1,9 @@
-# ============================================================================== #
-# MIT License                                                                    #
-#                                                                                #
-# Copyright (c) 2024 Nathan Juraj Michlo                                         #
-#                                                                                #
-# Permission is hereby granted, free of charge, to any person obtaining a copy   #
-# of this software and associated documentation files (the "Software"), to deal  #
-# in the Software without restriction, including without limitation the rights   #
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell      #
-# copies of the Software, and to permit persons to whom the Software is          #
-# furnished to do so, subject to the following conditions:                       #
-#                                                                                #
-# The above copyright notice and this permission notice shall be included in all #
-# copies or substantial portions of the Software.                                #
-#                                                                                #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR     #
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,       #
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE    #
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER         #
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,  #
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE  #
-# SOFTWARE.                                                                      #
-# ============================================================================== #
-
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2024 Nathan Juraj Michlo
 
 import dataclasses
 from collections import defaultdict
-from typing import List, NamedTuple, Optional, Tuple
+from typing import List, NamedTuple, Tuple
 
 # ========================================================================= #
 # REQUIREMENTS MAPPER                                                       #
@@ -58,7 +36,7 @@ class SrcInfo(NamedTuple):
 @dataclasses.dataclass
 class OutMappedRequirement:
     requirement: str
-    sources: List[OutMappedRequirementSource]
+    sources: list[OutMappedRequirementSource]
 
     @property
     def all_lazy(self) -> bool:
@@ -87,7 +65,7 @@ class OutMappedRequirement:
                 return [
                     SrcInfo(
                         name=src.source_module,
-                        comment=f"[L]" if annotate and src.is_lazy else "",
+                        comment="[L]" if annotate and src.is_lazy else "",
                     )
                     for src in self.sources
                 ]
@@ -123,8 +101,8 @@ class OutMappedRequirement:
 
 @dataclasses.dataclass
 class OutMappedRequirements:
-    requirements: List[OutMappedRequirement]
-    resolver_name: Optional[str] = None
+    requirements: list[OutMappedRequirement]
+    resolver_name: str | None = None
 
     _AUTOGEN_NOTICE = "[AUTOGEN] by pydependence **DO NOT EDIT** [AUTOGEN]"
     _AUTOGEN_NOTICE_NAMED = (
@@ -162,16 +140,16 @@ class OutMappedRequirements:
             # add requirement
             lines.append(f"{req.requirement}")
             # add annotations
-            lines[
-                -1
-            ] += f"{req.get_annotations_string(enabled=sources_annotations, comment=True)}"
+            lines[-1] += (
+                f"{req.get_annotations_string(enabled=sources_annotations, comment=True)}"
+            )
             # add compact sources
             if sources:
                 if sources_compact:
                     lines[-1] += f" # {req.get_sources_string(roots=sources_roots)}"
                 else:
                     for src_info in req.get_source_info(roots=sources_roots):
-                        lines.append(f"{' '*indent_size*1}# {src_info.anno_str}")
+                        lines.append(f"{' ' * indent_size * 1}# {src_info.anno_str}")
         if self.requirements or notice:
             lines.append("")
         return "\n".join(lines)

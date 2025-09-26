@@ -1,26 +1,5 @@
-# ============================================================================== #
-# MIT License                                                                    #
-#                                                                                #
-# Copyright (c) 2024 Nathan Juraj Michlo                                         #
-#                                                                                #
-# Permission is hereby granted, free of charge, to any person obtaining a copy   #
-# of this software and associated documentation files (the "Software"), to deal  #
-# in the Software without restriction, including without limitation the rights   #
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell      #
-# copies of the Software, and to permit persons to whom the Software is          #
-# furnished to do so, subject to the following conditions:                       #
-#                                                                                #
-# The above copyright notice and this permission notice shall be included in all #
-# copies or substantial portions of the Software.                                #
-#                                                                                #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR     #
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,       #
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE    #
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER         #
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,  #
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE  #
-# SOFTWARE.                                                                      #
-# ============================================================================== #
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2024 Nathan Juraj Michlo
 
 import contextlib
 import logging
@@ -30,11 +9,11 @@ import warnings
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Union
+from typing import Literal, Union
 
 import pydantic
 from packaging.requirements import Requirement
-from typing_extensions import Annotated
+from typing import Annotated
 
 from pydependence._core.module_imports_ast import ManualImportInfo
 from pydependence._core.modules_scope import (
@@ -78,7 +57,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class _ResolveRules(pydantic.BaseModel, extra="forbid"):
-
     # If true, then vist all the lazy imports. Usually the lazy imports are removed from
     # the import graph and we don't traverse these edges. This on the other-hand allows
     # all these edges to be traversed. This is often useful if you want to create
@@ -86,7 +64,7 @@ class _ResolveRules(pydantic.BaseModel, extra="forbid"):
     # that you define should be optional. Also useful if you want to generate a minimal
     # dependencies list, and then in optional dependency lists you want to create a full
     # set of requirements for everything!
-    visit_lazy: Optional[bool] = None
+    visit_lazy: bool | None = None
 
     # only applicable when `visit_lazy=False`, then in this case we re-add the lazy
     # imports that are directly referenced in all the traversed files, i.e. it is a
@@ -96,31 +74,31 @@ class _ResolveRules(pydantic.BaseModel, extra="forbid"):
     # within the same scope as this could cause missing imports, rather specify
     # `visit_lazy=True` in this case.
     # * [A.K.A.] `shallow_include_lazy=True`
-    re_add_lazy: Optional[bool] = None
+    re_add_lazy: bool | None = None
 
     # If true, then exclude imports that were not encountered as we traversed the import
     # graph. [NOTE]: this is probably useful if you don't want to include all imports
     # below a specific scope, but only want to resolve what is actually encountered.
     # Not entirely sure this has much of an effect?
-    exclude_unvisited: Optional[bool] = None
+    exclude_unvisited: bool | None = None
 
     # If true, then exclude all imports that are part of the current scope. This usually
     # should not have any effect because imports are replaced as we traverse the graph
     # through the current scope, [NOTE] thus not entirely sure that this has any effect,
     # should it be a bug if we encounter any of these?
-    exclude_in_search_space: Optional[bool] = None
+    exclude_in_search_space: bool | None = None
 
     # If true, then exclude all the python builtin package names from being output in
     # the requirements files. This usually should be true unless you are trying to debug
     # as this would generate invalid requirements list as these would not exist on pypi.
-    exclude_builtins: Optional[bool] = None
+    exclude_builtins: bool | None = None
 
     # Check that generated imports and requirements have entries in the versions list.
     # If strict mode is enabled, then an error is thrown if a version entry is missing.
     # If strict mode is disabled, then a warning should be given, and the root import
     # name is used instead of the requirement name, which may or may not match up
     # to an actual python package.
-    strict_requirements_map: Optional[bool] = None
+    strict_requirements_map: bool | None = None
 
     # TODO: we should add some sort of option to ensure that generated dependency lists
     #       exactly match some pre-defined set, while also outputting this set.
@@ -260,11 +238,11 @@ class OutputModeEnum(str, Enum):
 
 class _Output(_ResolveRules, extra="forbid"):
     # resolve
-    scope: Optional[str] = None
-    start_scope: Optional[str] = None
+    scope: str | None = None
+    start_scope: str | None = None
 
     # raw requirements / imports that are mapped
-    raw: Optional[List[str]] = None
+    raw: list[str] | None = None
 
     # requirements mapping
     env: str = DEFAULT_REQUIREMENTS_ENV
@@ -274,7 +252,7 @@ class _Output(_ResolveRules, extra="forbid"):
     output_file: str
 
     # !!!NB!!! DO NOT USE DIRECTLY! INSTEAD, USE `get_output_extras_name`
-    output_name: Optional[str] = None
+    output_name: str | None = None
 
     def get_output_extras_name(self) -> str:
         if self.output_name is not None:
@@ -382,7 +360,7 @@ class _Output(_ResolveRules, extra="forbid"):
                 resolver_name=self.get_output_extras_name(),
             )
         except NoConfiguredRequirementMappingError as e:
-            msg = f"\n  | ".join(["", *str(e).split("\n")])
+            msg = "\n  | ".join(["", *str(e).split("\n")])
             msg = f"[requirement-mapping-error] output: {self.get_output_extras_name()}{msg}"
             raise NoConfiguredRequirementMappingError(msg, e.imports) from e
         # 3. write requirements
@@ -439,7 +417,7 @@ class _OutputRequirements(_Output):
 
 class _OutputPyprojectOptionalDeps(_Output):
     output_mode: Literal[OutputModeEnum.optional_dependencies]
-    output_file: Optional[str] = None
+    output_file: str | None = None
 
     def _write_requirements(
         self, mapped_requirements: OutMappedRequirements, *, dry_run: bool
@@ -467,7 +445,7 @@ class _OutputPyprojectOptionalDeps(_Output):
 
 class _OutputPyprojectDeps(_Output):
     output_mode: Literal[OutputModeEnum.dependencies]
-    output_file: Optional[str] = None
+    output_file: str | None = None
 
     def _write_requirements(
         self, mapped_requirements: OutMappedRequirements, *, dry_run: bool
@@ -567,8 +545,8 @@ class CfgVersion(pydantic.BaseModel, extra="forbid", arbitrary_types_allowed=Tru
     # the pip install requirement
     requirement: str
     # the imports to replace
-    import_: Optional[List[str]] = pydantic.Field(default=None, alias="import")
-    scope: Optional[str] = None
+    import_: list[str] | None = pydantic.Field(default=None, alias="import")
+    scope: str | None = None
     # only apply this import to this environment
     env: str = DEFAULT_REQUIREMENTS_ENV
 
@@ -624,13 +602,12 @@ class CfgVersion(pydantic.BaseModel, extra="forbid", arbitrary_types_allowed=Tru
 
 
 class _ScopeRules(pydantic.BaseModel, extra="forbid"):
-
     # Specify how to handle modules that are unreachable, e.g. if there is no `__init__.py`
     # file in all the parents leading up to importing this module. If this is the case
     # then the module/package does not correctly follow python/PEP convention and is
     # technically invalid. By default, for `error`, we raise an exception and do not allow
     # the scope to be created, but this can be relaxed to `skip` or `keep` these files.
-    unreachable_mode: Optional[UnreachableModeEnum] = None
+    unreachable_mode: UnreachableModeEnum | None = None
 
     @classmethod
     def make_default_base_rules(cls):
@@ -650,12 +627,12 @@ class CfgScope(_ScopeRules, extra="forbid"):
     name: str
 
     # parents
-    parents: List[str] = pydantic.Field(default_factory=list)
+    parents: list[str] = pydantic.Field(default_factory=list)
 
     # search paths
-    search_paths: List[str] = pydantic.Field(default_factory=list)
-    pkg_paths: List[str] = pydantic.Field(default_factory=list)
-    unreachable_mode: Optional[UnreachableModeEnum] = None
+    search_paths: list[str] = pydantic.Field(default_factory=list)
+    pkg_paths: list[str] = pydantic.Field(default_factory=list)
+    unreachable_mode: UnreachableModeEnum | None = None
 
     # extra packages
     # packages: List[str] = pydantic.Field(default_factory=list)
@@ -665,15 +642,15 @@ class CfgScope(_ScopeRules, extra="forbid"):
     #   e.g. limit=foo.bar, exclude=foo.bar.baz, include=foo.bar.baz.qux
     #   if order of include and exclude were swapped, then the exclude would
     #   remove the module after the include added it back in
-    limit: Optional[List[str]] = None
-    exclude: Optional[List[str]] = None
+    limit: list[str] | None = None
+    exclude: list[str] | None = None
     # include: Optional[str] = None  # NOT IMPLEMENTED BECAUSE IT IS REDUNDANT, AND `PARENTS` CAN BE USED INSTEAD
 
     # sub-scopes
     # - name to import path map
     # - names must be unique across all scopes & sub-scopes
     # - imports must belong to the scope
-    subscopes: Dict[str, str] = pydantic.Field(default_factory=dict)
+    subscopes: dict[str, str] = pydantic.Field(default_factory=dict)
 
     @pydantic.field_validator("search_paths", mode="before")
     @classmethod
@@ -768,7 +745,6 @@ class UndefinedScopeError(ValueError):
 
 
 class LoadedScopes:
-
     def __init__(self):
         self._scopes = {}
 
@@ -789,7 +765,7 @@ class LoadedScopes:
         self._scopes[key] = value
 
     @property
-    def sorted_names(self) -> List[str]:
+    def sorted_names(self) -> list[str]:
         return sorted(self._scopes.keys())
 
 
@@ -812,13 +788,13 @@ class PydependenceCfg(pydantic.BaseModel, extra="forbid"):
     )
 
     # package versions
-    versions: List[CfgVersion] = pydantic.Field(default_factory=list)
+    versions: list[CfgVersion] = pydantic.Field(default_factory=list)
 
     # resolve
-    scopes: List[CfgScope] = pydantic.Field(default_factory=dict)
+    scopes: list[CfgScope] = pydantic.Field(default_factory=dict)
 
     # outputs
-    resolvers: List[CfgResolver] = pydantic.Field(default_factory=list)
+    resolvers: list[CfgResolver] = pydantic.Field(default_factory=list)
 
     @pydantic.field_validator("versions", mode="before")
     @classmethod
@@ -1061,7 +1037,7 @@ class _PyprojectToml(pydantic.BaseModel, extra="ignore"):
 
 def pydeps(
     *,
-    config_path: Union[str, Path],
+    config_path: str | Path,
     dry_run: bool = False,
 ) -> bool:
     # 1. get absolute

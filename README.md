@@ -140,6 +140,23 @@ python -m pydependence --help
 python -m pydependence <path_to_config.toml>
 ```
 
+### Local Development
+
+Easiest way is to use `uv`
+
+```bash
+pip install uv
+
+# clone repo
+git clone https://github.com/nmichlo/pydependence
+cd ./pydependence
+
+# setup pre-commit
+uvx --with .[dev] pre-commit install
+# run tests
+uvx --with .[dev,test] pytest
+```
+
 ----------------------
 
 ## Help

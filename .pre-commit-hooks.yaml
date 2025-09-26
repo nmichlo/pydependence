@@ -6,7 +6,7 @@
   always_run: true
   verbose: true
   entry: python3 -m pydependence
-  language_version: "3.9"
+  language_version: "3.13"
   additional_dependencies:
     - 'pydantic==2.*'
     - 'packaging'

@@ -1,26 +1,5 @@
-# ============================================================================== #
-# MIT License                                                                    #
-#                                                                                #
-# Copyright (c) 2024 Nathan Juraj Michlo                                         #
-#                                                                                #
-# Permission is hereby granted, free of charge, to any person obtaining a copy   #
-# of this software and associated documentation files (the "Software"), to deal  #
-# in the Software without restriction, including without limitation the rights   #
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell      #
-# copies of the Software, and to permit persons to whom the Software is          #
-# furnished to do so, subject to the following conditions:                       #
-#                                                                                #
-# The above copyright notice and this permission notice shall be included in all #
-# copies or substantial portions of the Software.                                #
-#                                                                                #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR     #
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,       #
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE    #
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER         #
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,  #
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE  #
-# SOFTWARE.                                                                      #
-# ============================================================================== #
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2024 Nathan Juraj Michlo
 
 import sys
 from pathlib import Path
@@ -37,7 +16,6 @@ from pydependence._core.module_imports_ast import (
 )
 from pydependence._core.module_imports_loader import (
     DEFAULT_MODULE_IMPORTS_LOADER,
-    ModuleImports,
 )
 from pydependence._core.modules_resolver import (
     ScopeNotASubsetError,
@@ -53,8 +31,6 @@ from pydependence._core.modules_scope import (
     _find_modules,
 )
 from pydependence._core.requirements_map import (
-    DEFAULT_REQUIREMENTS_ENV,
-    ImportMatcherBase,
     ImportMatcherGlob,
     ImportMatcherScope,
     NoConfiguredRequirementMappingError,
@@ -257,7 +233,7 @@ def test_find_modules_search_path(module_info):
         ("B", "B.b2"),
     }
     # not included!
-    edges_unreachable = {
+    _edges_unreachable = {
         ("A.a4", "A.a4.a4i"),
     }
 
@@ -413,7 +389,6 @@ def test_find_modules_pkg_path():
 
 
 def test_modules_scope():
-
     modules_a = {"A", "A.a1", "A.a2", "A.a3", "A.a3.a3i", "A.a4.a4i"}
     modules_b = {"B", "B.b1", "B.b2"}
     modules_c = {"C"}
@@ -875,7 +850,9 @@ def test_requirement_mapping():
     )
 
     # test
-    m = lambda x: mapper.map_import_to_requirement(x, requirements_env="default")
+    def m(x):
+        return mapper.map_import_to_requirement(x, requirements_env="default")
+
     # in order:
     assert m("A.a3.a3i") == "glob_Aa3"
     assert m("A.a4") == "glob_A"
@@ -888,7 +865,9 @@ def test_requirement_mapping():
     assert m("asdf.fdsa") == "asdf"  # take root
 
     # test alt
-    m = lambda x: mapper.map_import_to_requirement(x, requirements_env="asdf")
+    def m(x):
+        return mapper.map_import_to_requirement(x, requirements_env="asdf")
+
     # in order:
     assert m("A.a3.a3i") == "ALT_glob_Aa3"
     assert m("A.a4") == "glob_A"
@@ -1100,7 +1079,7 @@ def test_requirements_txt_gen(mapper: RequirementsMapper):
         sources_compact=True,
         sources_roots=True,
         indent_size=4,
-    ) == ("extern_D\nfoo\n" "glob_extern\n" "package\n")
+    ) == ("extern_D\nfoo\nglob_extern\npackage\n")
 
     assert mapped.as_requirements_txt(
         notice=True,
@@ -1209,12 +1188,7 @@ def test_toml_array_gen(mapper: RequirementsMapper):
         sources_roots=True,
         indent_size=4,
     ).as_string() == (
-        "[\n"
-        '    "extern_D",\n'
-        '    "foo",\n'
-        '    "glob_extern",\n'
-        '    "package",\n'
-        "]"
+        '[\n    "extern_D",\n    "foo",\n    "glob_extern",\n    "package",\n]'
     )
 
     assert mapped.as_toml_array(

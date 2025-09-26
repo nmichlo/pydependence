@@ -1,36 +1,15 @@
-# ============================================================================== #
-# MIT License                                                                    #
-#                                                                                #
-# Copyright (c) 2024 Nathan Juraj Michlo                                         #
-#                                                                                #
-# Permission is hereby granted, free of charge, to any person obtaining a copy   #
-# of this software and associated documentation files (the "Software"), to deal  #
-# in the Software without restriction, including without limitation the rights   #
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell      #
-# copies of the Software, and to permit persons to whom the Software is          #
-# furnished to do so, subject to the following conditions:                       #
-#                                                                                #
-# The above copyright notice and this permission notice shall be included in all #
-# copies or substantial portions of the Software.                                #
-#                                                                                #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR     #
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,       #
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE    #
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER         #
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,  #
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE  #
-# SOFTWARE.                                                                      #
-# ============================================================================== #
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2024 Nathan Juraj Michlo
+
 import abc
 import dataclasses
 import functools
 import warnings
-from typing import TYPE_CHECKING, Dict, List, NamedTuple, Optional, Set, Union
+from typing import TYPE_CHECKING, Dict, List, NamedTuple, Optional, Union
 
 from pydependence._core.builtin import BUILTIN_MODULE_NAMES
 from pydependence._core.module_imports_ast import (
     BasicImportInfo,
-    LocImportInfo,
     ManualImportInfo,
 )
 from pydependence._core.requirements_out import (
@@ -53,7 +32,6 @@ DEFAULT_REQUIREMENTS_ENV = "default"
 
 
 class ImportMatcherBase(abc.ABC):
-
     @abc.abstractmethod
     def match(self, import_: str) -> bool:
         raise NotImplementedError
@@ -64,7 +42,6 @@ class ImportMatcherBase(abc.ABC):
 
 
 class ImportMatcherScope(ImportMatcherBase):
-
     def __init__(self, scope: "ModulesScope"):
         self.scope = scope
 
@@ -76,7 +53,6 @@ class ImportMatcherScope(ImportMatcherBase):
 
 
 class ImportMatcherGlob(ImportMatcherBase):
-
     def __init__(self, import_glob: str):
         self._orig = import_glob
         (*parts, last) = import_glob.split(".")
@@ -116,7 +92,6 @@ class ImportMatcherGlob(ImportMatcherBase):
 
 
 class ImportMatcherGlobs(ImportMatcherBase):
-
     def __init__(self, import_globs: "Union[str, List[str]]"):
         if isinstance(import_globs, str):
             import_globs = import_globs.split(",")
@@ -161,7 +136,7 @@ class MappedRequirementInfo(NamedTuple):
 @dataclasses.dataclass
 class MappedRequirementSource:
     source_module: str
-    source_module_imports: List[BasicImportInfo]
+    source_module_imports: list[BasicImportInfo]
 
     def to_output_requirement_source(self):
         return OutMappedRequirementSource(
@@ -176,9 +151,9 @@ class MappedRequirementSource:
 @dataclasses.dataclass
 class MappedRequirement:
     requirement: str  # mapped name
-    sources: Dict[str, MappedRequirementSource]  # k == v.source_module
+    sources: dict[str, MappedRequirementSource]  # k == v.source_module
 
-    def get_sorted_sources(self) -> List[MappedRequirementSource]:
+    def get_sorted_sources(self) -> list[MappedRequirementSource]:
         return sorted(self.sources.values(), key=lambda x: x.source_module)
 
     def to_output_requirement(self):
@@ -193,10 +168,10 @@ class MappedRequirement:
 
 @dataclasses.dataclass
 class MappedRequirements:
-    requirements: Dict[str, MappedRequirement]  # k == v.requirement
-    resolver_name: Optional[str] = None
+    requirements: dict[str, MappedRequirement]  # k == v.requirement
+    resolver_name: str | None = None
 
-    def get_sorted_requirements(self) -> List[MappedRequirement]:
+    def get_sorted_requirements(self) -> list[MappedRequirement]:
         return sorted(
             self.requirements.values(),
             key=lambda x: x.requirement,
@@ -218,8 +193,7 @@ class MappedRequirements:
 
 
 class NoConfiguredRequirementMappingError(ValueError):
-
-    def __init__(self, msg: str, imports: Set[str]):
+    def __init__(self, msg: str, imports: set[str]):
         self.msg = msg
         self.imports = imports
         super().__init__(msg)
@@ -235,7 +209,6 @@ class ReqMatcher:
 
 
 class RequirementsMapper:
-
     def __init__(
         self,
         *,
@@ -378,8 +351,8 @@ class RequirementsMapper:
         *,
         requirements_env: "Optional[str]" = None,
         strict: bool = False,
-        raw: List[str] = None,
-        resolver_name: Optional[str] = None,
+        raw: list[str] = None,
+        resolver_name: str | None = None,
     ) -> "MappedRequirements":
         """
         Map imports to requirements, returning the imports grouped by the requirement.
@@ -465,7 +438,7 @@ class RequirementsMapper:
         *,
         requirements_env: "Optional[str]" = None,
         strict: bool = False,
-        resolver_name: Optional[str] = None,
+        resolver_name: str | None = None,
     ) -> "OutMappedRequirements":
         """
         :raises NoConfiguredRequirementMappingError: if no requirement is found for any import, but only if strict mode is enabled.

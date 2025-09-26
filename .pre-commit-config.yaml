@@ -1,36 +1,38 @@
+fail_fast: false
 
 repos:
+  # - repo: https://github.com/astral-sh/uv-pre-commit
+  #   rev: 0.8.19
+  #   hooks:
+  #     - id: uv-lock
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v6.0.0
     hooks:
       - id: check-added-large-files
         args: ["--maxkb=500"]
       - id: check-case-conflict
       - id: detect-private-key
+      - id: check-merge-conflict
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.15.2
+    rev: v3.20.0
     hooks:
       - id: pyupgrade
         args:
-          - "--py38-plus"
+          - "--py313-plus"
 
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.13.2
     hooks:
-      - id: isort
-        name: isort
-        args: ["--verbose", "--py=39", "--profile=black"]
-
-  - repo: https://github.com/psf/black
-    rev: 24.4.0
-    hooks:
-      - id: black
-        args: ["--verbose", "--target-version=py39"]
+      - id: ruff-check
+        args: [ --fix ]
+        exclude: ^tests/test-packages/
+      - id: ruff-format
 
   # this repo
-  - repo: https://github.com/nmichlo/pydependence
-    rev: v0.5.0
-    hooks:
-      - id: pydependence
-        args: ["pyproject.toml"]
+  # - repo: https://github.com/nmichlo/pydependence
+  #   rev: v0.5.0
+  #   hooks:
+  #     - id: pydependence
+  #       args: ["pyproject.toml"]

@@ -1,42 +1,25 @@
-# ============================================================================== #
-# MIT License                                                                    #
-#                                                                                #
-# Copyright (c) 2024 Nathan Juraj Michlo                                         #
-#                                                                                #
-# Permission is hereby granted, free of charge, to any person obtaining a copy   #
-# of this software and associated documentation files (the "Software"), to deal  #
-# in the Software without restriction, including without limitation the rights   #
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell      #
-# copies of the Software, and to permit persons to whom the Software is          #
-# furnished to do so, subject to the following conditions:                       #
-#                                                                                #
-# The above copyright notice and this permission notice shall be included in all #
-# copies or substantial portions of the Software.                                #
-#                                                                                #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR     #
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,       #
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE    #
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER         #
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,  #
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE  #
-# SOFTWARE.                                                                      #
-# ============================================================================== #
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2024 Nathan Juraj Michlo
+
+__all__ = [
+    "DuplicateModuleNamesError",
+    "ModulesScope",
+    "RestrictMode",
+    "RestrictOp",
+]
+
 import warnings
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
 from typing import (
-    TYPE_CHECKING,
     Dict,
-    Iterable,
-    Iterator,
     List,
     NamedTuple,
     Optional,
-    Sequence,
-    Set,
     Tuple,
 )
+from collections.abc import Iterable, Iterator, Sequence
 
 import networkx as nx
 
@@ -204,7 +187,6 @@ class RestrictOp(str, Enum):
 
 
 class ModulesScope:
-
     def __init__(self):
         self._module_graph = nx.DiGraph()
         self.__import_graph_strict = None
@@ -231,7 +213,7 @@ class ModulesScope:
         return self._merge_module_graph(graph=search_space._module_graph)
 
     def add_modules_from_raw_imports(
-        self, imports: List[str], tag: str
+        self, imports: list[str], tag: str
     ) -> "ModulesScope":
         g = nx.DiGraph()
         for imp in imports:
@@ -241,7 +223,7 @@ class ModulesScope:
     def add_modules_from_search_path(
         self,
         search_path: Path,
-        tag: Optional[str] = None,
+        tag: str | None = None,
         unreachable_mode: UnreachableModeEnum = UnreachableModeEnum.error,
     ) -> "ModulesScope":
         if tag is None:
@@ -260,7 +242,7 @@ class ModulesScope:
     def add_modules_from_package_path(
         self,
         package_path: Path,
-        tag: Optional[str] = None,
+        tag: str | None = None,
         unreachable_mode: UnreachableModeEnum = UnreachableModeEnum.error,
     ) -> "ModulesScope":
         if tag is None:
@@ -305,7 +287,7 @@ class ModulesScope:
     def is_scope_conflicts(self, other: "ModulesScope") -> bool:
         return bool(self._module_graph.nodes & other._module_graph.nodes)
 
-    def get_scope_conflicts(self, other: "ModulesScope") -> Set[str]:
+    def get_scope_conflicts(self, other: "ModulesScope") -> set[str]:
         return set(self._module_graph.nodes & other._module_graph.nodes)
 
     # ~=~=~ FILTER MODULES ~=~=~ #
@@ -389,11 +371,3 @@ class ModulesScope:
 # ========================================================================= #
 # END                                                                       #
 # ========================================================================= #
-
-
-__all__ = (
-    "DuplicateModuleNamesError",
-    "ModulesScope",
-    "RestrictMode",
-    "RestrictOp",
-)
