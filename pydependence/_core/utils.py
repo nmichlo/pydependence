@@ -23,7 +23,10 @@
 # ============================================================================== #
 
 from pathlib import Path
-from typing import List, Union
+from typing import List, TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    import tomlkit
 
 # ========================================================================= #
 # AST IMPORT PARSER                                                         #
@@ -99,9 +102,9 @@ def load_toml_document(
         raise FileNotFoundError(f"path is not a file: {path}")
     with open(path) as fp:
         toml = tomlkit.load(fp)
-        assert isinstance(
-            toml, tomlkit.toml_document.TOMLDocument
-        ), f"got {type(toml)}, not TOMLDocument"
+        assert isinstance(toml, tomlkit.toml_document.TOMLDocument), (
+            f"got {type(toml)}, not TOMLDocument"
+        )
     return toml
 
 
@@ -135,9 +138,9 @@ def toml_file_replace_array(
     # TODO: this needs multiple loads and writes if we are modifying multiple arrays
     #       which is not ideal... but it is a simple solution for now.
 
-    assert isinstance(
-        array, tomlkit.items.Array
-    ), f"array must be a tomlkit Array, got: {type(array)}"
+    assert isinstance(array, tomlkit.items.Array), (
+        f"array must be a tomlkit Array, got: {type(array)}"
+    )
 
     # load file
     file = Path(file)

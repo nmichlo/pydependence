@@ -27,4 +27,5 @@ repos:
     hooks:
       - id: ruff-check
         args: [ --fix ]
+        exclude: ^tests/test-packages/
       - id: ruff-format

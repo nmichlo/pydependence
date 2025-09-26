@@ -26,7 +26,6 @@ from collections import defaultdict
 from enum import Enum
 from pathlib import Path
 from typing import (
-    TYPE_CHECKING,
     Dict,
     Iterable,
     Iterator,
@@ -204,7 +203,6 @@ class RestrictOp(str, Enum):
 
 
 class ModulesScope:
-
     def __init__(self):
         self._module_graph = nx.DiGraph()
         self.__import_graph_strict = None

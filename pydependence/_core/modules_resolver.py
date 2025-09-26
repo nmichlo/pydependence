@@ -24,7 +24,7 @@
 
 import warnings
 from collections import defaultdict
-from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Tuple
+from typing import Dict, List, NamedTuple, Optional, Set, Tuple
 
 import networkx as nx
 
@@ -178,7 +178,6 @@ def _resolve_scope_imports(
 
 
 class ScopeResolvedImports:
-
     def __init__(
         self,
         scope: "ModulesScope",
@@ -222,7 +221,6 @@ class ScopeResolvedImports:
         exclude_in_search_space: bool = True,
         exclude_builtins: bool = True,
     ) -> "ScopeResolvedImports":
-
         def _keep(imp: LocImportInfo) -> bool:
             if exclude_builtins and imp.target in BUILTIN_MODULE_NAMES:
                 return False

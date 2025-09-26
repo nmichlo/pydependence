@@ -57,7 +57,6 @@ class ModuleImports:
 
 
 class _ModuleImportsLoader:
-
     def __init__(self):
         # TODO: tag could severally hurt performance? maybe should change data structure slightly?
         #       problem is tag is nested and applied to imports too. HOWEVER, Usually tag is

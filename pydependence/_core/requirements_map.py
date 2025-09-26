@@ -30,7 +30,6 @@ from typing import TYPE_CHECKING, Dict, List, NamedTuple, Optional, Set, Union
 from pydependence._core.builtin import BUILTIN_MODULE_NAMES
 from pydependence._core.module_imports_ast import (
     BasicImportInfo,
-    LocImportInfo,
     ManualImportInfo,
 )
 from pydependence._core.requirements_out import (
@@ -53,7 +52,6 @@ DEFAULT_REQUIREMENTS_ENV = "default"
 
 
 class ImportMatcherBase(abc.ABC):
-
     @abc.abstractmethod
     def match(self, import_: str) -> bool:
         raise NotImplementedError
@@ -64,7 +62,6 @@ class ImportMatcherBase(abc.ABC):
 
 
 class ImportMatcherScope(ImportMatcherBase):
-
     def __init__(self, scope: "ModulesScope"):
         self.scope = scope
 
@@ -76,7 +73,6 @@ class ImportMatcherScope(ImportMatcherBase):
 
 
 class ImportMatcherGlob(ImportMatcherBase):
-
     def __init__(self, import_glob: str):
         self._orig = import_glob
         (*parts, last) = import_glob.split(".")
@@ -116,7 +112,6 @@ class ImportMatcherGlob(ImportMatcherBase):
 
 
 class ImportMatcherGlobs(ImportMatcherBase):
-
     def __init__(self, import_globs: "Union[str, List[str]]"):
         if isinstance(import_globs, str):
             import_globs = import_globs.split(",")
@@ -218,7 +213,6 @@ class MappedRequirements:
 
 
 class NoConfiguredRequirementMappingError(ValueError):
-
     def __init__(self, msg: str, imports: Set[str]):
         self.msg = msg
         self.imports = imports
@@ -235,7 +229,6 @@ class ReqMatcher:
 
 
 class RequirementsMapper:
-
     def __init__(
         self,
         *,

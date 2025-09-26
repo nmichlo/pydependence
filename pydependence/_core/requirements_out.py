@@ -87,7 +87,7 @@ class OutMappedRequirement:
                 return [
                     SrcInfo(
                         name=src.source_module,
-                        comment=f"[L]" if annotate and src.is_lazy else "",
+                        comment="[L]" if annotate and src.is_lazy else "",
                     )
                     for src in self.sources
                 ]
@@ -162,16 +162,16 @@ class OutMappedRequirements:
             # add requirement
             lines.append(f"{req.requirement}")
             # add annotations
-            lines[
-                -1
-            ] += f"{req.get_annotations_string(enabled=sources_annotations, comment=True)}"
+            lines[-1] += (
+                f"{req.get_annotations_string(enabled=sources_annotations, comment=True)}"
+            )
             # add compact sources
             if sources:
                 if sources_compact:
                     lines[-1] += f" # {req.get_sources_string(roots=sources_roots)}"
                 else:
                     for src_info in req.get_source_info(roots=sources_roots):
-                        lines.append(f"{' '*indent_size*1}# {src_info.anno_str}")
+                        lines.append(f"{' ' * indent_size * 1}# {src_info.anno_str}")
         if self.requirements or notice:
             lines.append("")
         return "\n".join(lines)

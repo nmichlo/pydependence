@@ -78,7 +78,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class _ResolveRules(pydantic.BaseModel, extra="forbid"):
-
     # If true, then vist all the lazy imports. Usually the lazy imports are removed from
     # the import graph and we don't traverse these edges. This on the other-hand allows
     # all these edges to be traversed. This is often useful if you want to create
@@ -382,7 +381,7 @@ class _Output(_ResolveRules, extra="forbid"):
                 resolver_name=self.get_output_extras_name(),
             )
         except NoConfiguredRequirementMappingError as e:
-            msg = f"\n  | ".join(["", *str(e).split("\n")])
+            msg = "\n  | ".join(["", *str(e).split("\n")])
             msg = f"[requirement-mapping-error] output: {self.get_output_extras_name()}{msg}"
             raise NoConfiguredRequirementMappingError(msg, e.imports) from e
         # 3. write requirements
@@ -624,7 +623,6 @@ class CfgVersion(pydantic.BaseModel, extra="forbid", arbitrary_types_allowed=Tru
 
 
 class _ScopeRules(pydantic.BaseModel, extra="forbid"):
-
     # Specify how to handle modules that are unreachable, e.g. if there is no `__init__.py`
     # file in all the parents leading up to importing this module. If this is the case
     # then the module/package does not correctly follow python/PEP convention and is
@@ -768,7 +766,6 @@ class UndefinedScopeError(ValueError):
 
 
 class LoadedScopes:
-
     def __init__(self):
         self._scopes = {}
 

@@ -29,7 +29,7 @@ import sys
 import warnings
 from collections import Counter, defaultdict
 from enum import Enum
-from typing import DefaultDict, Dict, List, Literal, NamedTuple, Optional, Tuple
+from typing import DefaultDict, Dict, List, Literal, Optional, Tuple
 
 from pydependence._core.module_data import ModuleMetadata
 from pydependence._core.utils import assert_valid_import_name, assert_valid_module_path
@@ -231,7 +231,6 @@ class LocImportInfo(BasicImportInfo):
 
 
 class _AstImportsCollector(ast.NodeVisitor):
-
     def __init__(self, module_info: ModuleMetadata):
         self._module_info: ModuleMetadata = module_info
         self._imports: "DefaultDict[str, List[LocImportInfo]]" = defaultdict(list)
@@ -387,7 +386,7 @@ class _AstImportsCollector(ast.NodeVisitor):
             return
         # - make sure no keyword arguments are used, these invalidate the import.
         if node.keywords:
-            self._node_warn(node, f"should not have keyword arguments.")
+            self._node_warn(node, "should not have keyword arguments.")
             return
         # - make sure that the function is called with a single string argument
         if not len(node.args) == 1:
