@@ -102,6 +102,8 @@ celerybeat.pid
 *.sage.py
 
 # Environments
+.*.env
+.env.*
 .env
 .venv
 env/
@@ -128,5 +130,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# macos
+## CUSTOM ##
+
 .DS_Store
+.idea/
+CLAUDE.local.md
+.claude/settings.local.json
