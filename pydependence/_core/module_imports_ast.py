@@ -29,7 +29,7 @@ import sys
 import warnings
 from collections import Counter, defaultdict
 from enum import Enum
-from typing import DefaultDict, Dict, List, Literal, Optional, Tuple
+from typing import DefaultDict, Dict, List, Literal, Optional
 
 from pydependence._core.module_data import ModuleMetadata
 from pydependence._core.utils import assert_valid_import_name, assert_valid_module_path
@@ -217,7 +217,7 @@ class LocImportInfo(BasicImportInfo):
     # debug
     lineno: int
     col_offset: int
-    stack_type_names: Tuple[str, ...]
+    stack_type_names: tuple[str, ...]
     # relative import
     is_relative: bool
 

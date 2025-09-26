@@ -26,7 +26,8 @@ import pkgutil
 import warnings
 from importlib.machinery import FileFinder
 from pathlib import Path
-from typing import Iterator, NamedTuple
+from typing import NamedTuple
+from collections.abc import Iterator
 
 from pydependence._core.utils import assert_valid_import_name, assert_valid_tag
 

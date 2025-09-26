@@ -16,11 +16,11 @@ repos:
       - id: check-merge-conflict
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.15.2
+    rev: v3.20.0
     hooks:
       - id: pyupgrade
         args:
-          - "--py38-plus"
+          - "--py313-plus"
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.13.2

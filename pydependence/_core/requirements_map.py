@@ -25,7 +25,7 @@ import abc
 import dataclasses
 import functools
 import warnings
-from typing import TYPE_CHECKING, Dict, List, NamedTuple, Optional, Set, Union
+from typing import TYPE_CHECKING, Dict, List, NamedTuple, Optional, Union
 
 from pydependence._core.builtin import BUILTIN_MODULE_NAMES
 from pydependence._core.module_imports_ast import (
@@ -156,7 +156,7 @@ class MappedRequirementInfo(NamedTuple):
 @dataclasses.dataclass
 class MappedRequirementSource:
     source_module: str
-    source_module_imports: List[BasicImportInfo]
+    source_module_imports: list[BasicImportInfo]
 
     def to_output_requirement_source(self):
         return OutMappedRequirementSource(
@@ -171,9 +171,9 @@ class MappedRequirementSource:
 @dataclasses.dataclass
 class MappedRequirement:
     requirement: str  # mapped name
-    sources: Dict[str, MappedRequirementSource]  # k == v.source_module
+    sources: dict[str, MappedRequirementSource]  # k == v.source_module
 
-    def get_sorted_sources(self) -> List[MappedRequirementSource]:
+    def get_sorted_sources(self) -> list[MappedRequirementSource]:
         return sorted(self.sources.values(), key=lambda x: x.source_module)
 
     def to_output_requirement(self):
@@ -188,10 +188,10 @@ class MappedRequirement:
 
 @dataclasses.dataclass
 class MappedRequirements:
-    requirements: Dict[str, MappedRequirement]  # k == v.requirement
-    resolver_name: Optional[str] = None
+    requirements: dict[str, MappedRequirement]  # k == v.requirement
+    resolver_name: str | None = None
 
-    def get_sorted_requirements(self) -> List[MappedRequirement]:
+    def get_sorted_requirements(self) -> list[MappedRequirement]:
         return sorted(
             self.requirements.values(),
             key=lambda x: x.requirement,
@@ -213,7 +213,7 @@ class MappedRequirements:
 
 
 class NoConfiguredRequirementMappingError(ValueError):
-    def __init__(self, msg: str, imports: Set[str]):
+    def __init__(self, msg: str, imports: set[str]):
         self.msg = msg
         self.imports = imports
         super().__init__(msg)
@@ -371,8 +371,8 @@ class RequirementsMapper:
         *,
         requirements_env: "Optional[str]" = None,
         strict: bool = False,
-        raw: List[str] = None,
-        resolver_name: Optional[str] = None,
+        raw: list[str] = None,
+        resolver_name: str | None = None,
     ) -> "MappedRequirements":
         """
         Map imports to requirements, returning the imports grouped by the requirement.
@@ -458,7 +458,7 @@ class RequirementsMapper:
         *,
         requirements_env: "Optional[str]" = None,
         strict: bool = False,
-        resolver_name: Optional[str] = None,
+        resolver_name: str | None = None,
     ) -> "OutMappedRequirements":
         """
         :raises NoConfiguredRequirementMappingError: if no requirement is found for any import, but only if strict mode is enabled.

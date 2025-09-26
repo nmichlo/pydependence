@@ -25,7 +25,7 @@
 
 import dataclasses
 from collections import defaultdict
-from typing import List, NamedTuple, Optional, Tuple
+from typing import List, NamedTuple, Tuple
 
 # ========================================================================= #
 # REQUIREMENTS MAPPER                                                       #
@@ -58,7 +58,7 @@ class SrcInfo(NamedTuple):
 @dataclasses.dataclass
 class OutMappedRequirement:
     requirement: str
-    sources: List[OutMappedRequirementSource]
+    sources: list[OutMappedRequirementSource]
 
     @property
     def all_lazy(self) -> bool:
@@ -123,8 +123,8 @@ class OutMappedRequirement:
 
 @dataclasses.dataclass
 class OutMappedRequirements:
-    requirements: List[OutMappedRequirement]
-    resolver_name: Optional[str] = None
+    requirements: list[OutMappedRequirement]
+    resolver_name: str | None = None
 
     _AUTOGEN_NOTICE = "[AUTOGEN] by pydependence **DO NOT EDIT** [AUTOGEN]"
     _AUTOGEN_NOTICE_NAMED = (

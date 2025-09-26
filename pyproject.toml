@@ -115,8 +115,6 @@ dependencies = [
     #     ← pydependence._cli
     "stdlib_list",
     #     ← pydependence._core.builtin
-    "typing-extensions",
-    #     ← pydependence._cli
 ]
 
 # - - - - - - - - - - - - - - - - - - - - - - #
@@ -153,8 +151,6 @@ test = [
     #     ← [L] pydependence._core.requirements_out
     #     ← [L] pydependence._core.utils
     #     ← [L] tests.test_module_data
-    "typing-extensions",
-    #     ← pydependence._cli
 ]
 some = [
     # [AUTOGEN] by pydependence resolver 'some' **DO NOT EDIT** [AUTOGEN]
@@ -167,8 +163,6 @@ some = [
     #     ← pydependence._cli
     "stdlib_list",
     #     ← pydependence._core.builtin
-    "typing-extensions",
-    #     ← pydependence._cli
 ]
 all = [
     # [AUTOGEN] by pydependence resolver 'all' **DO NOT EDIT** [AUTOGEN]
@@ -184,8 +178,6 @@ all = [
     "tomlkit", # [L]
     #     ← [L] pydependence._core.requirements_out
     #     ← [L] pydependence._core.utils
-    "typing-extensions",
-    #     ← pydependence._cli
 ]
 core = [
     # [AUTOGEN] by pydependence resolver 'core' **DO NOT EDIT** [AUTOGEN]
@@ -209,8 +201,6 @@ example-core-no-lazy = [
     #     ← pydependence._cli
     "stdlib_list",
     #     ← pydependence._core.builtin
-    "typing-extensions",
-    #     ← pydependence._cli
 ]
 example-legacy = [
     # [AUTOGEN] by pydependence resolver 'example-legacy' **DO NOT EDIT** [AUTOGEN]
@@ -226,6 +216,4 @@ example-legacy = [
     "tomlkit", # [L]
     #     ← [L] pydependence._core.requirements_out
     #     ← [L] pydependence._core.utils
-    "typing-extensions",
-    #     ← pydependence._cli
 ]

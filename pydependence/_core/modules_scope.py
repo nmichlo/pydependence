@@ -27,15 +27,12 @@ from enum import Enum
 from pathlib import Path
 from typing import (
     Dict,
-    Iterable,
-    Iterator,
     List,
     NamedTuple,
     Optional,
-    Sequence,
-    Set,
     Tuple,
 )
+from collections.abc import Iterable, Iterator, Sequence
 
 import networkx as nx
 
@@ -229,7 +226,7 @@ class ModulesScope:
         return self._merge_module_graph(graph=search_space._module_graph)
 
     def add_modules_from_raw_imports(
-        self, imports: List[str], tag: str
+        self, imports: list[str], tag: str
     ) -> "ModulesScope":
         g = nx.DiGraph()
         for imp in imports:
@@ -239,7 +236,7 @@ class ModulesScope:
     def add_modules_from_search_path(
         self,
         search_path: Path,
-        tag: Optional[str] = None,
+        tag: str | None = None,
         unreachable_mode: UnreachableModeEnum = UnreachableModeEnum.error,
     ) -> "ModulesScope":
         if tag is None:
@@ -258,7 +255,7 @@ class ModulesScope:
     def add_modules_from_package_path(
         self,
         package_path: Path,
-        tag: Optional[str] = None,
+        tag: str | None = None,
         unreachable_mode: UnreachableModeEnum = UnreachableModeEnum.error,
     ) -> "ModulesScope":
         if tag is None:
@@ -303,7 +300,7 @@ class ModulesScope:
     def is_scope_conflicts(self, other: "ModulesScope") -> bool:
         return bool(self._module_graph.nodes & other._module_graph.nodes)
 
-    def get_scope_conflicts(self, other: "ModulesScope") -> Set[str]:
+    def get_scope_conflicts(self, other: "ModulesScope") -> set[str]:
         return set(self._module_graph.nodes & other._module_graph.nodes)
 
     # ~=~=~ FILTER MODULES ~=~=~ #
