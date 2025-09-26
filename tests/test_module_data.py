@@ -851,7 +851,7 @@ def test_requirement_mapping():
 
     # test
     def m(x):
-        mapper.map_import_to_requirement(x, requirements_env="default")
+        return mapper.map_import_to_requirement(x, requirements_env="default")
 
     # in order:
     assert m("A.a3.a3i") == "glob_Aa3"
@@ -866,7 +866,7 @@ def test_requirement_mapping():
 
     # test alt
     def m(x):
-        mapper.map_import_to_requirement(x, requirements_env="asdf")
+        return mapper.map_import_to_requirement(x, requirements_env="asdf")
 
     # in order:
     assert m("A.a3.a3i") == "ALT_glob_Aa3"
