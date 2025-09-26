@@ -1,6 +1,11 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2024 Nathan Juraj Michlo
 
+__all__ = [
+    "load_imports_from_module_info",
+    "LocImportInfo",
+    "ImportSourceEnum",
+]
 
 import ast
 import dataclasses
@@ -448,13 +453,6 @@ def load_imports_from_module_info(
 # ========================================================================= #
 # END                                                                       #
 # ========================================================================= #
-
-
-__all__ = (
-    "load_imports_from_module_info",
-    "LocImportInfo",
-    "ImportSourceEnum",
-)
 
 
 # PYTHON VERSION: 3.10

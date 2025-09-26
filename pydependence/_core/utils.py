@@ -1,6 +1,13 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2024 Nathan Juraj Michlo
 
+__all__ = [
+    "assert_valid_module_path",
+    "assert_valid_import_name",
+    "apply_root_to_path_str",
+    "load_toml_document",
+]
+
 from pathlib import Path
 from typing import List, TYPE_CHECKING, Union
 
@@ -150,11 +157,3 @@ def toml_file_replace_array(
 # ========================================================================= #
 # END                                                                       #
 # ========================================================================= #
-
-
-__all__ = (
-    "assert_valid_module_path",
-    "assert_valid_import_name",
-    "apply_root_to_path_str",
-    "load_toml_document",
-)

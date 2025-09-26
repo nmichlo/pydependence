@@ -1,6 +1,13 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2024 Nathan Juraj Michlo
 
+__all__ = [
+    "DuplicateModuleNamesError",
+    "ModulesScope",
+    "RestrictMode",
+    "RestrictOp",
+]
+
 import warnings
 from collections import defaultdict
 from enum import Enum
@@ -364,11 +371,3 @@ class ModulesScope:
 # ========================================================================= #
 # END                                                                       #
 # ========================================================================= #
-
-
-__all__ = (
-    "DuplicateModuleNamesError",
-    "ModulesScope",
-    "RestrictMode",
-    "RestrictOp",
-)

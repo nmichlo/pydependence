@@ -1,6 +1,10 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2024 Nathan Juraj Michlo
 
+__all__ = [
+    "ModuleImports",
+    "DEFAULT_MODULE_IMPORTS_LOADER",
+]
 
 import dataclasses
 from typing import Dict, List, Tuple
@@ -64,9 +68,3 @@ DEFAULT_MODULE_IMPORTS_LOADER = _ModuleImportsLoader()
 # ========================================================================= #
 # END                                                                       #
 # ========================================================================= #
-
-
-__all__ = (
-    "ModuleImports",
-    "DEFAULT_MODULE_IMPORTS_LOADER",
-)

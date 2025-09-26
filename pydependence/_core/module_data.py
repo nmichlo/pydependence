@@ -1,6 +1,10 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2024 Nathan Juraj Michlo
 
+__all__ = [
+    "ModuleMetadata",
+]
+
 import pkgutil
 import warnings
 from importlib.machinery import FileFinder
@@ -129,6 +133,3 @@ class ModuleMetadata(NamedTuple):
 # ========================================================================= #
 # END                                                                       #
 # ========================================================================= #
-
-
-__all__ = ("ModuleMetadata",)
