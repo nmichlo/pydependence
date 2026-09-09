@@ -1,0 +1,14 @@
+name: test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    uses: nmichlo/.github/.github/workflows/pytest.yaml@main
+    with:
+      python-versions: '["3.12", "3.13"]'
+      install-extras: "test"
+      pytest-args: "--color=yes --verbose"
