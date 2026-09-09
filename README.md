@@ -62,7 +62,7 @@ This project was created for multiple reasons
 - Find missing dependencies
 - Generate optional dependencies lists, eg. for pyproject.toml
 - Create minimal dockerfiles with only the dependencies that are needed for
-  a specific entrypoint 
+  a specific entrypoint
 
 ### How This Works
 
@@ -109,7 +109,7 @@ resolvers = [
 ## Usage
 
 `pydependence` can be triggered from both the CLI and using pre-commit, and
-currently requires `python>=3.8`, however, it should still be able to run in
+currently requires `python>=3.12`, however, it should still be able to run in
 a virtual environment over legacy python code.
 
 

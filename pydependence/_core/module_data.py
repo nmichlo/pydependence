@@ -24,11 +24,13 @@
 
 import pkgutil
 import warnings
+from collections.abc import Iterator
 from importlib.machinery import FileFinder
 from pathlib import Path
-from typing import Iterator, NamedTuple
+from typing import NamedTuple
 
-from pydependence._core.utils import assert_valid_import_name, assert_valid_tag
+from pydependence._core.utils import assert_valid_import_name
+from pydependence._core.utils import assert_valid_tag
 
 # ========================================================================= #
 # MODULE INFO                                                               #
@@ -114,9 +116,7 @@ class ModuleMetadata(NamedTuple):
         for p in _visit(search_path):
             m = cls.from_root_and_subpath(search_path, subpath=p, tag=tag)
             if valid_only and (not m.is_name_valid):
-                warnings.warn(
-                    f"Invalid module name: {m.name}, cannot be imported or resolved, skipping: {m.path}"
-                )
+                warnings.warn(f"Invalid module name: {m.name}, cannot be imported or resolved, skipping: {m.path}")
                 continue
             yield m
         # Only one level deep & does not work if __init__.py is not present.
@@ -137,9 +137,7 @@ class ModuleMetadata(NamedTuple):
         for p in _visit(package_path):
             m = cls.from_root_and_subpath(package_path.parent, subpath=p, tag=tag)
             if valid_only and (not m.is_name_valid):
-                warnings.warn(
-                    f"Invalid module name: {m.name}, cannot be imported or resolved, skipping: {m.path}"
-                )
+                warnings.warn(f"Invalid module name: {m.name}, cannot be imported or resolved, skipping: {m.path}")
                 continue
             yield m
         # Only one level deep & does not work if __init__.py is not present.

@@ -6,11 +6,10 @@
   always_run: true
   verbose: true
   entry: python3 -m pydependence
-  language_version: "3.9"
+  language_version: "3.12"
   additional_dependencies:
     - 'pydantic==2.*'
     - 'packaging'
     - 'networkx'
     - 'stdlib-list'
     - 'tomlkit'
-    - 'typing-extensions'

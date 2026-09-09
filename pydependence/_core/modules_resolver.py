@@ -24,18 +24,17 @@
 
 import warnings
 from collections import defaultdict
-from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Tuple
+from typing import NamedTuple
 
 import networkx as nx
 
 from pydependence._core.builtin import BUILTIN_MODULE_NAMES
 from pydependence._core.module_data import ModuleMetadata
 from pydependence._core.module_imports_ast import LocImportInfo
-from pydependence._core.module_imports_loader import (
-    DEFAULT_MODULE_IMPORTS_LOADER,
-    ModuleImports,
-)
-from pydependence._core.modules_scope import NODE_KEY_MODULE_INFO, ModulesScope
+from pydependence._core.module_imports_loader import DEFAULT_MODULE_IMPORTS_LOADER
+from pydependence._core.module_imports_loader import ModuleImports
+from pydependence._core.modules_scope import NODE_KEY_MODULE_INFO
+from pydependence._core.modules_scope import ModulesScope
 
 # ========================================================================= #
 # IMPORT GRAPH                                                              #
@@ -47,8 +46,8 @@ EDGE_KEY_IMPORTS = "imports"
 
 
 class _ImportsGraphNodeData(NamedTuple):
-    module_info: "Optional[ModuleMetadata]"
-    module_imports: "Optional[ModuleImports]"
+    module_info: "ModuleMetadata | None"
+    module_imports: "ModuleImports | None"
 
     @classmethod
     def from_graph_node(cls, graph: "nx.DiGraph", node: str) -> "_ImportsGraphNodeData":
@@ -59,12 +58,10 @@ class _ImportsGraphNodeData(NamedTuple):
 
 
 class _ImportsGraphEdgeData(NamedTuple):
-    imports: "List[LocImportInfo]"
+    imports: "list[LocImportInfo]"
 
     @classmethod
-    def from_graph_edge(
-        cls, graph: "nx.DiGraph", src: str, dst: str
-    ) -> "_ImportsGraphEdgeData":
+    def from_graph_edge(cls, graph: "nx.DiGraph", src: str, dst: str) -> "_ImportsGraphEdgeData":
         edge_data = graph.edges[src, dst]
         imports = edge_data.get(EDGE_KEY_IMPORTS, [])
         return cls(imports=imports)
@@ -125,10 +122,10 @@ class ScopeNotASubsetError(ValueError):
 
 def _resolve_scope_imports(
     scope: "ModulesScope",
-    start_scope: "Optional[ModulesScope]",
+    start_scope: "ModulesScope | None",
     visit_lazy: bool,
     re_add_lazy: bool,
-) -> "Tuple[List[LocImportInfo], Set[str]]":
+) -> "tuple[list[LocImportInfo], set[str]]":
     if start_scope is None:
         start_scope = scope
     if not scope.is_scope_subset(start_scope):
@@ -163,9 +160,7 @@ def _resolve_scope_imports(
         for node in visited:
             # get edges directed out of the node
             for src, dst in import_graph.out_edges(node):
-                edge_data = _ImportsGraphEdgeData.from_graph_edge(
-                    import_graph, src, dst
-                )
+                edge_data = _ImportsGraphEdgeData.from_graph_edge(import_graph, src, dst)
                 # only add lazy imports, because these would have been filtered out
                 for imp in edge_data.imports:
                     if imp.is_lazy:
@@ -178,13 +173,12 @@ def _resolve_scope_imports(
 
 
 class ScopeResolvedImports:
-
     def __init__(
         self,
         scope: "ModulesScope",
         start_scope: "ModulesScope",
-        imports: "List[LocImportInfo]",
-        visited: "Set[str]",
+        imports: "list[LocImportInfo]",
+        visited: "set[str]",
     ):
         self._scope = scope
         self._start_scope = start_scope
@@ -195,7 +189,7 @@ class ScopeResolvedImports:
     def from_scope(
         cls,
         scope: "ModulesScope",
-        start_scope: "Optional[ModulesScope]" = None,
+        start_scope: "ModulesScope | None" = None,
         visit_lazy: bool = True,
         re_add_lazy: bool = False,
     ):
@@ -239,20 +233,17 @@ class ScopeResolvedImports:
             visited=set(self._visited),
         )
 
-    def get_imports(self) -> "List[LocImportInfo]":
+    def get_imports(self) -> "list[LocImportInfo]":
         return list(self._imports)
 
     # ~=~=~ debug ~=~=~ #
 
-    def _get_targets_sources_counts(self) -> "Dict[str, Dict[str, int]]":
+    def _get_targets_sources_counts(self) -> "dict[str, dict[str, int]]":
         # used for debugging / testing
         trg_src_imps = defaultdict(lambda: defaultdict(list))
         for imp in self._imports:
             trg_src_imps[imp.target][imp.source_name].append(imp)
-        return {
-            trg: {src: len(imps) for src, imps in src_imps.items()}
-            for trg, src_imps in trg_src_imps.items()
-        }
+        return {trg: {src: len(imps) for src, imps in src_imps.items()} for trg, src_imps in trg_src_imps.items()}
 
 
 # ========================================================================= #

@@ -25,7 +25,7 @@
 
 import dataclasses
 from collections import defaultdict
-from typing import List, NamedTuple, Optional, Tuple
+from typing import NamedTuple
 
 # ========================================================================= #
 # REQUIREMENTS MAPPER                                                       #
@@ -58,7 +58,7 @@ class SrcInfo(NamedTuple):
 @dataclasses.dataclass
 class OutMappedRequirement:
     requirement: str
-    sources: List[OutMappedRequirementSource]
+    sources: list[OutMappedRequirementSource]
 
     @property
     def all_lazy(self) -> bool:
@@ -73,21 +73,18 @@ class OutMappedRequirement:
         enabled: bool = True,
         roots: bool = False,
         annotate: bool = True,
-    ) -> "List[SrcInfo]":
+    ) -> "list[SrcInfo]":
         if enabled:
             if roots:
                 r = defaultdict(lambda: True)
                 for src in self.sources:
                     r[src.source_module_root] &= src.is_lazy
-                return [
-                    SrcInfo(name=k, comment="[L]" if annotate and r[k] else "")
-                    for k in sorted(r.keys())
-                ]
+                return [SrcInfo(name=k, comment="[L]" if annotate and r[k] else "") for k in sorted(r.keys())]
             else:
                 return [
                     SrcInfo(
                         name=src.source_module,
-                        comment=f"[L]" if annotate and src.is_lazy else "",
+                        comment="[L]" if annotate and src.is_lazy else "",
                     )
                     for src in self.sources
                 ]
@@ -99,10 +96,7 @@ class OutMappedRequirement:
         enabled: bool = True,
         roots: bool = False,
     ) -> str:
-        return ", ".join(
-            i.name
-            for i in self.get_source_info(enabled=enabled, roots=roots, annotate=False)
-        )
+        return ", ".join(i.name for i in self.get_source_info(enabled=enabled, roots=roots, annotate=False))
 
     def get_annotations_string(
         self,
@@ -123,28 +117,21 @@ class OutMappedRequirement:
 
 @dataclasses.dataclass
 class OutMappedRequirements:
-    requirements: List[OutMappedRequirement]
-    resolver_name: Optional[str] = None
+    requirements: list[OutMappedRequirement]
+    resolver_name: str | None = None
 
     _AUTOGEN_NOTICE = "[AUTOGEN] by pydependence **DO NOT EDIT** [AUTOGEN]"
-    _AUTOGEN_NOTICE_NAMED = (
-        "[AUTOGEN] by pydependence resolver {resolver_name} **DO NOT EDIT** [AUTOGEN]"
-    )
+    _AUTOGEN_NOTICE_NAMED = "[AUTOGEN] by pydependence resolver {resolver_name} **DO NOT EDIT** [AUTOGEN]"
 
     @property
     def autogen_notice(self) -> str:
         if self.resolver_name is None:
             return self._AUTOGEN_NOTICE
         else:
-            return self._AUTOGEN_NOTICE_NAMED.format(
-                resolver_name=repr(self.resolver_name)
-            )
+            return self._AUTOGEN_NOTICE_NAMED.format(resolver_name=repr(self.resolver_name))
 
-    def _get_debug_struct(self) -> "List[Tuple[str, List[str]]]":
-        return [
-            (req.requirement, [src.source_module for src in req.sources])
-            for req in self.requirements
-        ]
+    def _get_debug_struct(self) -> "list[tuple[str, list[str]]]":
+        return [(req.requirement, [src.source_module for src in req.sources]) for req in self.requirements]
 
     def as_requirements_txt(
         self,
@@ -162,16 +149,14 @@ class OutMappedRequirements:
             # add requirement
             lines.append(f"{req.requirement}")
             # add annotations
-            lines[
-                -1
-            ] += f"{req.get_annotations_string(enabled=sources_annotations, comment=True)}"
+            lines[-1] += f"{req.get_annotations_string(enabled=sources_annotations, comment=True)}"
             # add compact sources
             if sources:
                 if sources_compact:
                     lines[-1] += f" # {req.get_sources_string(roots=sources_roots)}"
                 else:
                     for src_info in req.get_source_info(roots=sources_roots):
-                        lines.append(f"{' '*indent_size*1}# {src_info.anno_str}")
+                        lines.append(f"{' ' * indent_size * 1}# {src_info.anno_str}")
         if self.requirements or notice:
             lines.append("")
         return "\n".join(lines)
@@ -220,9 +205,7 @@ class OutMappedRequirements:
                 # Add line has a bug where it doesn't add the correct indentation before the comment
                 # - so we instead add padding after the `#`
                 # `array.add_line(indent=f"{' ' * (indent_size * 1)}, comment=f"{src_info.anno_str}")`
-                array.add_line(
-                    indent="", comment=f"{' ' * (indent_size * 1)}{src_info.anno_str}"
-                )
+                array.add_line(indent="", comment=f"{' ' * (indent_size * 1)}{src_info.anno_str}")
                 # NOTE: While this does not properly handle commas between lines ...
                 # array.append(tomlkit.items.Comment(tomlkit.container.Trivia(
                 #     indent=" " * (indent_size * 1),

@@ -172,4 +172,3 @@ raw-resolve-3b = [
     "opencv_python_contrib==2", # [M]
     #     ← <manual: opencv_python_contrib>
 ]
-

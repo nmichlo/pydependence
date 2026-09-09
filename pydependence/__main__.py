@@ -95,9 +95,7 @@ def _cli():
     if changed:
         LOGGER.info("[pydependence] files changed.")
         if args.exit_zero:
-            LOGGER.info(
-                "[pydependence] exit-zero enabled, returning success exit code."
-            )
+            LOGGER.info("[pydependence] exit-zero enabled, returning success exit code.")
             exit(0)
         else:
             exit(1)

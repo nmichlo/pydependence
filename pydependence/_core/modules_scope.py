@@ -23,20 +23,12 @@
 # ============================================================================== #
 import warnings
 from collections import defaultdict
-from enum import Enum
+from collections.abc import Iterable
+from collections.abc import Iterator
+from collections.abc import Sequence
+from enum import StrEnum
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Dict,
-    Iterable,
-    Iterator,
-    List,
-    NamedTuple,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-)
+from typing import NamedTuple
 
 import networkx as nx
 
@@ -64,14 +56,14 @@ class DuplicateModulePathsError(DuplicateModulesError):
 
 
 class _ModuleGraphNodeData(NamedTuple):
-    module_info: "Optional[ModuleMetadata]"
+    module_info: "ModuleMetadata | None"
 
     @classmethod
     def from_graph_node(cls, graph: "nx.DiGraph", node: str) -> "_ModuleGraphNodeData":
         return cls(module_info=graph.nodes[node].get(NODE_KEY_MODULE_INFO, None))
 
 
-def _collect_paths_to_modules(*gs) -> "Dict[str, List[str]]":
+def _collect_paths_to_modules(*gs) -> "dict[str, list[str]]":
     module_paths = defaultdict(list)
     for g in gs:
         for node in g.nodes:
@@ -92,7 +84,7 @@ def _assert_no_duplicate_paths(*gs) -> None:
             )
 
 
-class UnreachableModeEnum(str, Enum):
+class UnreachableModeEnum(StrEnum):
     error = "error"
     skip = "skip"
     keep = "keep"
@@ -104,8 +96,8 @@ class UnreachableModuleError(RuntimeError):
 
 def _find_modules(
     *,
-    search_paths: "Optional[Sequence[Path]]",
-    package_paths: "Optional[Sequence[Path]]",
+    search_paths: "Sequence[Path] | None",
+    package_paths: "Sequence[Path] | None",
     tag: str,
     unreachable_mode: UnreachableModeEnum,
 ) -> "nx.DiGraph":
@@ -122,12 +114,12 @@ def _find_modules(
             if not search_path.exists():
                 raise FileNotFoundError(f"Search path does not exist: {search_path}")
             if not search_path.is_dir():
-                raise NotADirectoryError(
-                    f"Search path must be a directory, got: {search_path}"
-                )
+                raise NotADirectoryError(f"Search path must be a directory, got: {search_path}")
             for m in ModuleMetadata.yield_search_path_modules(search_path, tag=tag):
                 if m.name in g:
                     dat = _ModuleGraphNodeData.from_graph_node(g, m.name)
+                    # every node in `g` was added below with real metadata, never `None`.
+                    assert dat.module_info is not None
                     raise DuplicateModuleNamesError(
                         f"Duplicate module name: {repr(m.name)}, already exists as: {dat.module_info.path}, tried to add: {m.path}, from search path: {search_path}. "
                         f"These modules are incompatible and cannot be loaded together!"
@@ -142,6 +134,8 @@ def _find_modules(
             for m in ModuleMetadata.yield_package_modules(package_path, tag=tag):
                 if m.name in g:
                     dat = _ModuleGraphNodeData.from_graph_node(g, m.name)
+                    # every node in `g` was added below with real metadata, never `None`.
+                    assert dat.module_info is not None
                     raise DuplicateModuleNamesError(
                         f"Duplicate module name: {repr(m.name)}, already exists as: {dat.module_info.path}, tried to add: {m.path}, from package path: {package_path}. "
                         f"These modules are incompatible and cannot be loaded together!"
@@ -192,19 +186,18 @@ def _find_modules(
 # ========================================================================= #
 
 
-class RestrictMode(str, Enum):
+class RestrictMode(StrEnum):
     EXACT = "EXACT"
     CHILDREN = "CHILDREN"
     ROOT_CHILDREN = "ROOT_CHILDREN"
 
 
-class RestrictOp(str, Enum):
+class RestrictOp(StrEnum):
     LIMIT = "LIMIT"  # only include these
     EXCLUDE = "EXCLUDE"  # exclude these
 
 
 class ModulesScope:
-
     def __init__(self):
         self._module_graph = nx.DiGraph()
         self.__import_graph_strict = None
@@ -218,9 +211,7 @@ class ModulesScope:
         # 1.b get all nodes that are in both search spaces
         nodes = set(self._module_graph.nodes) & set(graph.nodes)
         if nodes:
-            raise DuplicateModuleNamesError(
-                f"Duplicate module names found: {sorted(nodes)}"
-            )
+            raise DuplicateModuleNamesError(f"Duplicate module names found: {sorted(nodes)}")
         # 2. add all nodes from the other search space
         self._module_graph = nx.compose(self._module_graph, graph)
         self.__import_graph_strict = None
@@ -230,9 +221,7 @@ class ModulesScope:
     def add_modules_from_scope(self, search_space: "ModulesScope") -> "ModulesScope":
         return self._merge_module_graph(graph=search_space._module_graph)
 
-    def add_modules_from_raw_imports(
-        self, imports: List[str], tag: str
-    ) -> "ModulesScope":
+    def add_modules_from_raw_imports(self, imports: list[str], tag: str) -> "ModulesScope":
         g = nx.DiGraph()
         for imp in imports:
             g.add_node(imp)
@@ -241,14 +230,12 @@ class ModulesScope:
     def add_modules_from_search_path(
         self,
         search_path: Path,
-        tag: Optional[str] = None,
+        tag: str | None = None,
         unreachable_mode: UnreachableModeEnum = UnreachableModeEnum.error,
     ) -> "ModulesScope":
         if tag is None:
             tag = search_path.name
-            warnings.warn(
-                f"No tag provided for search path: {repr(search_path)}, using path name as tag: {repr(tag)}"
-            )
+            warnings.warn(f"No tag provided for search path: {repr(search_path)}, using path name as tag: {repr(tag)}")
         graph = _find_modules(
             search_paths=[search_path],
             package_paths=None,
@@ -260,7 +247,7 @@ class ModulesScope:
     def add_modules_from_package_path(
         self,
         package_path: Path,
-        tag: Optional[str] = None,
+        tag: str | None = None,
         unreachable_mode: UnreachableModeEnum = UnreachableModeEnum.error,
     ) -> "ModulesScope":
         if tag is None:
@@ -281,7 +268,7 @@ class ModulesScope:
     def iter_modules(self) -> "Iterator[str]":
         yield from self._module_graph.nodes
 
-    def iter_module_items(self) -> "Iterator[Tuple[str, _ModuleGraphNodeData]]":
+    def iter_module_items(self) -> "Iterator[tuple[str, _ModuleGraphNodeData]]":
         for node in self._module_graph.nodes:
             yield node, _ModuleGraphNodeData.from_graph_node(self._module_graph, node)
 
@@ -305,7 +292,7 @@ class ModulesScope:
     def is_scope_conflicts(self, other: "ModulesScope") -> bool:
         return bool(self._module_graph.nodes & other._module_graph.nodes)
 
-    def get_scope_conflicts(self, other: "ModulesScope") -> Set[str]:
+    def get_scope_conflicts(self, other: "ModulesScope") -> set[str]:
         return set(self._module_graph.nodes & other._module_graph.nodes)
 
     # ~=~=~ FILTER MODULES ~=~=~ #
@@ -340,9 +327,7 @@ class ModulesScope:
             elif mode == RestrictMode.ROOT_CHILDREN:
                 remove = node_parts[:1] not in allowed
             elif mode == RestrictMode.CHILDREN:
-                remove = not any(
-                    node_parts[: i + 1] in allowed for i in range(len(node_parts))
-                )
+                remove = not any(node_parts[: i + 1] in allowed for i in range(len(node_parts)))
             else:
                 raise ValueError(f"Invalid mode: {mode}")
             # apply the operation
@@ -362,7 +347,7 @@ class ModulesScope:
 
     def resolve_imports(
         self,
-        start_scope: "Optional[ModulesScope]" = None,
+        start_scope: "ModulesScope | None" = None,
         *,
         visit_lazy: bool = True,
         re_add_lazy: bool = False,

@@ -23,7 +23,12 @@
 # ============================================================================== #
 
 from pathlib import Path
-from typing import List, Union
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import tomlkit
+    import tomlkit.items
+    import tomlkit.toml_document
 
 # ========================================================================= #
 # AST IMPORT PARSER                                                         #
@@ -38,7 +43,7 @@ def assert_valid_tag(tag: str) -> str:
     return tag
 
 
-def assert_valid_module_path(path: "Union[Path, str]") -> Path:
+def assert_valid_module_path(path: "Path | str") -> Path:
     path = Path(path)
     if not path.is_absolute():
         raise ValueError(f"Path must be absolute: {path}")
@@ -52,14 +57,10 @@ def assert_valid_module_path(path: "Union[Path, str]") -> Path:
 def assert_valid_import_name(import_: str) -> str:
     parts = import_.split(".")
     if not parts:
-        raise ValueError(
-            f"import path must have at least one part for: {repr(import_)}"
-        )
+        raise ValueError(f"import path must have at least one part for: {repr(import_)}")
     for part in parts:
         if not part.isidentifier():
-            raise NameError(
-                f"import part: {repr(part)} is not a valid identifier, obtained from: {repr(import_)}"
-            )
+            raise NameError(f"import part: {repr(part)} is not a valid identifier, obtained from: {repr(import_)}")
     return import_
 
 
@@ -68,7 +69,7 @@ def assert_valid_import_name(import_: str) -> str:
 # ========================================================================= #
 
 
-def apply_root_to_path_str(root: "Union[str, Path]", path: "Union[str, Path]") -> str:
+def apply_root_to_path_str(root: "str | Path", path: "str | Path") -> str:
     root = Path(root)
     path = Path(path)
     if not root.is_absolute():
@@ -86,7 +87,7 @@ def apply_root_to_path_str(root: "Union[str, Path]", path: "Union[str, Path]") -
 
 
 def load_toml_document(
-    path: "Union[str, Path]",
+    path: "str | Path",
 ) -> "tomlkit.toml_document.TOMLDocument":
     import tomlkit
     import tomlkit.items
@@ -99,9 +100,7 @@ def load_toml_document(
         raise FileNotFoundError(f"path is not a file: {path}")
     with open(path) as fp:
         toml = tomlkit.load(fp)
-        assert isinstance(
-            toml, tomlkit.toml_document.TOMLDocument
-        ), f"got {type(toml)}, not TOMLDocument"
+        assert isinstance(toml, tomlkit.toml_document.TOMLDocument), f"got {type(toml)}, not TOMLDocument"
     return toml
 
 
@@ -112,7 +111,7 @@ def load_toml_document(
 
 def txt_file_dump(
     *,
-    file: "Union[str, Path]",
+    file: "str | Path",
     contents: "str",
 ):
     # write
@@ -124,8 +123,8 @@ def txt_file_dump(
 
 def toml_file_replace_array(
     *,
-    file: "Union[str, Path]",
-    keys: "List[str]",
+    file: "str | Path",
+    keys: "list[str]",
     array: "tomlkit.items.Array",
 ):
     import tomlkit
@@ -135,9 +134,7 @@ def toml_file_replace_array(
     # TODO: this needs multiple loads and writes if we are modifying multiple arrays
     #       which is not ideal... but it is a simple solution for now.
 
-    assert isinstance(
-        array, tomlkit.items.Array
-    ), f"array must be a tomlkit Array, got: {type(array)}"
+    assert isinstance(array, tomlkit.items.Array), f"array must be a tomlkit Array, got: {type(array)}"
 
     # load file
     file = Path(file)

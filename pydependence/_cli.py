@@ -28,47 +28,32 @@ import shutil
 import tempfile
 import warnings
 from collections import defaultdict
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Union
+from typing import Annotated
+from typing import Literal
+from typing import Self
 
 import pydantic
 from packaging.requirements import Requirement
-from typing_extensions import Annotated
 
 from pydependence._core.module_imports_ast import ManualImportInfo
-from pydependence._core.modules_scope import (
-    ModulesScope,
-    RestrictMode,
-    RestrictOp,
-    UnreachableModeEnum,
-)
-from pydependence._core.requirements_map import (
-    DEFAULT_REQUIREMENTS_ENV,
-    ImportMatcherBase,
-    ImportMatcherGlobs,
-    ImportMatcherScope,
-    NoConfiguredRequirementMappingError,
-    ReqMatcher,
-    RequirementsMapper,
-)
+from pydependence._core.modules_scope import ModulesScope
+from pydependence._core.modules_scope import RestrictMode
+from pydependence._core.modules_scope import RestrictOp
+from pydependence._core.modules_scope import UnreachableModeEnum
+from pydependence._core.requirements_map import DEFAULT_REQUIREMENTS_ENV
+from pydependence._core.requirements_map import ImportMatcherBase
+from pydependence._core.requirements_map import ImportMatcherGlobs
+from pydependence._core.requirements_map import ImportMatcherScope
+from pydependence._core.requirements_map import NoConfiguredRequirementMappingError
+from pydependence._core.requirements_map import ReqMatcher
+from pydependence._core.requirements_map import RequirementsMapper
 from pydependence._core.requirements_out import OutMappedRequirements
-from pydependence._core.utils import (
-    apply_root_to_path_str,
-    load_toml_document,
-    toml_file_replace_array,
-    txt_file_dump,
-)
-
-# python 3.8 support
-# TODO: this pattern is not yet supported by the lazy dependency resolver
-#       we should specifically add support for this pattern, as it is a common.
-# TODO: we should add the ability to exclude certain imports from the pydependence
-#       resolve to handle cases like this.
-# try:
-#     from typing import Annotated
-# except ImportError:
-#     from typing_extensions import Annotated
+from pydependence._core.utils import apply_root_to_path_str
+from pydependence._core.utils import load_toml_document
+from pydependence._core.utils import toml_file_replace_array
+from pydependence._core.utils import txt_file_dump
 
 LOGGER = logging.getLogger(__name__)
 
@@ -78,7 +63,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class _ResolveRules(pydantic.BaseModel, extra="forbid"):
-
     # If true, then vist all the lazy imports. Usually the lazy imports are removed from
     # the import graph and we don't traverse these edges. This on the other-hand allows
     # all these edges to be traversed. This is often useful if you want to create
@@ -86,7 +70,7 @@ class _ResolveRules(pydantic.BaseModel, extra="forbid"):
     # that you define should be optional. Also useful if you want to generate a minimal
     # dependencies list, and then in optional dependency lists you want to create a full
     # set of requirements for everything!
-    visit_lazy: Optional[bool] = None
+    visit_lazy: bool | None = None
 
     # only applicable when `visit_lazy=False`, then in this case we re-add the lazy
     # imports that are directly referenced in all the traversed files, i.e. it is a
@@ -96,31 +80,31 @@ class _ResolveRules(pydantic.BaseModel, extra="forbid"):
     # within the same scope as this could cause missing imports, rather specify
     # `visit_lazy=True` in this case.
     # * [A.K.A.] `shallow_include_lazy=True`
-    re_add_lazy: Optional[bool] = None
+    re_add_lazy: bool | None = None
 
     # If true, then exclude imports that were not encountered as we traversed the import
     # graph. [NOTE]: this is probably useful if you don't want to include all imports
     # below a specific scope, but only want to resolve what is actually encountered.
     # Not entirely sure this has much of an effect?
-    exclude_unvisited: Optional[bool] = None
+    exclude_unvisited: bool | None = None
 
     # If true, then exclude all imports that are part of the current scope. This usually
     # should not have any effect because imports are replaced as we traverse the graph
     # through the current scope, [NOTE] thus not entirely sure that this has any effect,
     # should it be a bug if we encounter any of these?
-    exclude_in_search_space: Optional[bool] = None
+    exclude_in_search_space: bool | None = None
 
     # If true, then exclude all the python builtin package names from being output in
     # the requirements files. This usually should be true unless you are trying to debug
     # as this would generate invalid requirements list as these would not exist on pypi.
-    exclude_builtins: Optional[bool] = None
+    exclude_builtins: bool | None = None
 
     # Check that generated imports and requirements have entries in the versions list.
     # If strict mode is enabled, then an error is thrown if a version entry is missing.
     # If strict mode is disabled, then a warning should be given, and the root import
     # name is used instead of the requirement name, which may or may not match up
     # to an actual python package.
-    strict_requirements_map: Optional[bool] = None
+    strict_requirements_map: bool | None = None
 
     # TODO: we should add some sort of option to ensure that generated dependency lists
     #       exactly match some pre-defined set, while also outputting this set.
@@ -166,8 +150,8 @@ class _ResolveRules(pydantic.BaseModel, extra="forbid"):
 
 
 def check_files_differ(
-    src: "Union[str, Path]",
-    dst: "Union[str, Path]",
+    src: "str | Path",
+    dst: "str | Path",
 ) -> bool:
     src = Path(src)
     dst = Path(dst)
@@ -185,7 +169,7 @@ def check_files_differ(
 
 @contextlib.contextmanager
 def atomic_gen_file_ctx(
-    file: "Union[str, Path]",
+    file: "str | Path",
     dry_run: bool = False,
     copy_file_to_temp: bool = True,
 ):
@@ -198,9 +182,7 @@ def atomic_gen_file_ctx(
         @property
         def changed(self) -> bool:
             if changed is None:
-                raise RuntimeError(
-                    f"[BUG] tempfile has not been generated yet for: {final_path}"
-                )
+                raise RuntimeError(f"[BUG] tempfile has not been generated yet for: {final_path}")
             return changed
 
         @property
@@ -210,13 +192,9 @@ def atomic_gen_file_ctx(
         @property
         def temp_path(self) -> Path:
             if changed is not None:
-                raise RuntimeError(
-                    f"[BUG] tempfile has already been generated for: {final_path}"
-                )
+                raise RuntimeError(f"[BUG] tempfile has already been generated for: {final_path}")
             if temp_path is None:
-                raise RuntimeError(
-                    f"[BUG] tempfile has not been generated yet for: {final_path}"
-                )
+                raise RuntimeError(f"[BUG] tempfile has not been generated yet for: {final_path}")
             return temp_path
 
     # 1. write to temp file next to original, get the file path
@@ -252,7 +230,7 @@ def atomic_gen_file_ctx(
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - #
 
 
-class OutputModeEnum(str, Enum):
+class OutputModeEnum(StrEnum):
     requirements = "requirements"
     optional_dependencies = "optional-dependencies"
     dependencies = "dependencies"
@@ -260,11 +238,11 @@ class OutputModeEnum(str, Enum):
 
 class _Output(_ResolveRules, extra="forbid"):
     # resolve
-    scope: Optional[str] = None
-    start_scope: Optional[str] = None
+    scope: str | None = None
+    start_scope: str | None = None
 
     # raw requirements / imports that are mapped
-    raw: Optional[List[str]] = None
+    raw: list[str] | None = None
 
     # requirements mapping
     env: str = DEFAULT_REQUIREMENTS_ENV
@@ -274,7 +252,7 @@ class _Output(_ResolveRules, extra="forbid"):
     output_file: str
 
     # !!!NB!!! DO NOT USE DIRECTLY! INSTEAD, USE `get_output_extras_name`
-    output_name: Optional[str] = None
+    output_name: str | None = None
 
     def get_output_extras_name(self) -> str:
         if self.output_name is not None:
@@ -313,12 +291,11 @@ class _Output(_ResolveRules, extra="forbid"):
         return v
 
     @pydantic.model_validator(mode="after")
-    @classmethod
-    def _validate_model(cls, v):
-        if v.start_scope is not None:
-            if v.scope is None:
-                raise ValueError(f"start_scope is set, but scope is not set for: {v}")
-        return v
+    def _validate_model(self) -> Self:
+        if self.start_scope is not None:
+            if self.scope is None:
+                raise ValueError(f"start_scope is set, but scope is not set for: {self}")
+        return self
 
     def get_resolved_imports(
         self,
@@ -328,9 +305,7 @@ class _Output(_ResolveRules, extra="forbid"):
             return []
         # * normal scope
         if self.scope not in loaded_scopes:
-            raise ValueError(
-                f"scope {repr(self.scope)} does not exist, must be one of: {loaded_scopes.sorted_names}"
-            )
+            raise ValueError(f"scope {repr(self.scope)} does not exist, must be one of: {loaded_scopes.sorted_names}")
         else:
             scope = loaded_scopes[self.scope]
         # * start scope
@@ -343,6 +318,12 @@ class _Output(_ResolveRules, extra="forbid"):
             else:
                 start_scope = loaded_scopes[self.start_scope]
         # * resolve imports
+        # `set_defaults` (called before this) guarantees these are no longer `None`.
+        assert self.visit_lazy is not None
+        assert self.re_add_lazy is not None
+        assert self.exclude_unvisited is not None
+        assert self.exclude_in_search_space is not None
+        assert self.exclude_builtins is not None
         return scope.resolve_imports(
             start_scope=start_scope,
             visit_lazy=self.visit_lazy,
@@ -374,6 +355,8 @@ class _Output(_ResolveRules, extra="forbid"):
         resolved_imports = self.get_resolved_imports(loaded_scopes=loaded_scopes)
         manual_imports = self.get_manual_imports()
         # 2. generate requirements
+        # `set_defaults` (called before this) guarantees this is no longer `None`.
+        assert self.strict_requirements_map is not None
         try:
             mapped_requirements = requirements_mapper.generate_output_requirements(
                 imports=resolved_imports + manual_imports,
@@ -382,7 +365,7 @@ class _Output(_ResolveRules, extra="forbid"):
                 resolver_name=self.get_output_extras_name(),
             )
         except NoConfiguredRequirementMappingError as e:
-            msg = f"\n  | ".join(["", *str(e).split("\n")])
+            msg = "\n  | ".join(["", *str(e).split("\n")])
             msg = f"[requirement-mapping-error] output: {self.get_output_extras_name()}{msg}"
             raise NoConfiguredRequirementMappingError(msg, e.imports) from e
         # 3. write requirements
@@ -392,9 +375,7 @@ class _Output(_ResolveRules, extra="forbid"):
         )
         return changed
 
-    def _write_requirements(
-        self, mapped_requirements: OutMappedRequirements, *, dry_run: bool
-    ) -> bool:
+    def _write_requirements(self, mapped_requirements: OutMappedRequirements, *, dry_run: bool) -> bool:
         """
         Write the requirements to the output file.
 
@@ -439,11 +420,9 @@ class _OutputRequirements(_Output):
 
 class _OutputPyprojectOptionalDeps(_Output):
     output_mode: Literal[OutputModeEnum.optional_dependencies]
-    output_file: Optional[str] = None
+    output_file: str | None = None
 
-    def _write_requirements(
-        self, mapped_requirements: OutMappedRequirements, *, dry_run: bool
-    ):
+    def _write_requirements(self, mapped_requirements: OutMappedRequirements, *, dry_run: bool):
         array = mapped_requirements.as_toml_array(
             notice=True,
             sources=True,
@@ -452,9 +431,9 @@ class _OutputPyprojectOptionalDeps(_Output):
             indent_size=4,
         )
         out_name = self.get_output_extras_name()
-        LOGGER.info(
-            f"writing optional dependencies: {repr(out_name)} to: {self.output_file}"
-        )
+        LOGGER.info(f"writing optional dependencies: {repr(out_name)} to: {self.output_file}")
+        # `apply_defaults` (called before this) guarantees this is no longer `None`.
+        assert self.output_file is not None
         # create temp dir, generate, and check if changed
         with atomic_gen_file_ctx(file=self.output_file, dry_run=dry_run) as gen_info:
             toml_file_replace_array(
@@ -467,11 +446,9 @@ class _OutputPyprojectOptionalDeps(_Output):
 
 class _OutputPyprojectDeps(_Output):
     output_mode: Literal[OutputModeEnum.dependencies]
-    output_file: Optional[str] = None
+    output_file: str | None = None
 
-    def _write_requirements(
-        self, mapped_requirements: OutMappedRequirements, *, dry_run: bool
-    ):
+    def _write_requirements(self, mapped_requirements: OutMappedRequirements, *, dry_run: bool):
         array = mapped_requirements.as_toml_array(
             notice=True,
             sources=True,
@@ -480,6 +457,8 @@ class _OutputPyprojectDeps(_Output):
             indent_size=4,
         )
         LOGGER.info(f"writing dependencies to: {self.output_file}")
+        # `apply_defaults` (called before this) guarantees this is no longer `None`.
+        assert self.output_file is not None
         # create temp dir, generate, and check if changed
         with atomic_gen_file_ctx(file=self.output_file, dry_run=dry_run) as gen_info:
             toml_file_replace_array(
@@ -491,11 +470,7 @@ class _OutputPyprojectDeps(_Output):
 
 
 CfgResolver = Annotated[
-    Union[
-        _OutputRequirements,
-        _OutputPyprojectOptionalDeps,
-        _OutputPyprojectDeps,
-    ],
+    _OutputRequirements | _OutputPyprojectOptionalDeps | _OutputPyprojectDeps,
     pydantic.Field(discriminator="output_mode", union_mode="left_to_right"),
 ]
 
@@ -521,13 +496,9 @@ def normalize_pkg_name(string: str, strict: bool = True):
         raise InvalidRequirementsName(f"Requirements name is invalid: {repr(string)}")
     if norm != string:
         if strict:
-            raise InvalidRequirementsName(
-                f"Requirements name is invalid: {repr(string)}, should be: {repr(norm)}"
-            )
+            raise InvalidRequirementsName(f"Requirements name is invalid: {repr(string)}, should be: {repr(norm)}")
         else:
-            warnings.warn(
-                f"normalized requirements name from {repr(string)} to {repr(norm)}"
-            )
+            warnings.warn(f"normalized requirements name from {repr(string)} to {repr(norm)}")
     return norm
 
 
@@ -540,9 +511,7 @@ def normalize_extras_name(string: str, strict: bool = True):
         raise InvalidExtrasName(f"Extras name is invalid: {repr(string)}")
     if norm != string:
         if strict:
-            raise InvalidExtrasName(
-                f"Extras name is invalid: {repr(string)}, should be: {repr(norm)}"
-            )
+            raise InvalidExtrasName(f"Extras name is invalid: {repr(string)}, should be: {repr(norm)}")
         else:
             warnings.warn(f"normalized extras name from {repr(string)} to {repr(norm)}")
     return norm
@@ -555,9 +524,7 @@ def normalize_import_to_scope_name(string: str, strict: bool = True):
     norm = string.replace(".", "-").replace("*", "all")
     if norm != string:
         if strict:
-            raise ValueError(
-                f"import name is invalid: {repr(string)}, should be: {repr(norm)}"
-            )
+            raise ValueError(f"import name is invalid: {repr(string)}, should be: {repr(norm)}")
         else:
             warnings.warn(f"normalized import name from {repr(string)} to {repr(norm)}")
     return norm
@@ -567,8 +534,8 @@ class CfgVersion(pydantic.BaseModel, extra="forbid", arbitrary_types_allowed=Tru
     # the pip install requirement
     requirement: str
     # the imports to replace
-    import_: Optional[List[str]] = pydantic.Field(default=None, alias="import")
-    scope: Optional[str] = None
+    import_: list[str] | None = pydantic.Field(default=None, alias="import")
+    scope: str | None = None
     # only apply this import to this environment
     env: str = DEFAULT_REQUIREMENTS_ENV
 
@@ -597,17 +564,16 @@ class CfgVersion(pydantic.BaseModel, extra="forbid", arbitrary_types_allowed=Tru
                 return ImportMatcherGlobs(import_globs=self.import_)
 
     @pydantic.model_validator(mode="after")
-    @classmethod
-    def _validate_model_before(cls, v: "CfgVersion"):
-        if not str.isidentifier(v.env.replace("-", "_")):
+    def _validate_model_before(self) -> Self:
+        if not str.isidentifier(self.env.replace("-", "_")):
             raise ValueError(
-                f"env must be a valid identifier (with hyphens replaced with underscores), got: {v.env}"
+                f"env must be a valid identifier (with hyphens replaced with underscores), got: {self.env}"
             )
-        if v.import_ is None and v.scope is None:
-            v.import_ = [f"{v.package}.*"]  # wildcard
-        elif v.import_ is not None and v.scope is not None:
-            raise ValueError(f"cannot specify both scope and import for: {v}")
-        return v
+        if self.import_ is None and self.scope is None:
+            self.import_ = [f"{self.package}.*"]  # wildcard
+        elif self.import_ is not None and self.scope is not None:
+            raise ValueError(f"cannot specify both scope and import for: {self}")
+        return self
 
     @pydantic.field_validator("import_", mode="before")
     @classmethod
@@ -624,13 +590,12 @@ class CfgVersion(pydantic.BaseModel, extra="forbid", arbitrary_types_allowed=Tru
 
 
 class _ScopeRules(pydantic.BaseModel, extra="forbid"):
-
     # Specify how to handle modules that are unreachable, e.g. if there is no `__init__.py`
     # file in all the parents leading up to importing this module. If this is the case
     # then the module/package does not correctly follow python/PEP convention and is
     # technically invalid. By default, for `error`, we raise an exception and do not allow
     # the scope to be created, but this can be relaxed to `skip` or `keep` these files.
-    unreachable_mode: Optional[UnreachableModeEnum] = None
+    unreachable_mode: UnreachableModeEnum | None = None
 
     @classmethod
     def make_default_base_rules(cls):
@@ -650,12 +615,12 @@ class CfgScope(_ScopeRules, extra="forbid"):
     name: str
 
     # parents
-    parents: List[str] = pydantic.Field(default_factory=list)
+    parents: list[str] = pydantic.Field(default_factory=list)
 
     # search paths
-    search_paths: List[str] = pydantic.Field(default_factory=list)
-    pkg_paths: List[str] = pydantic.Field(default_factory=list)
-    unreachable_mode: Optional[UnreachableModeEnum] = None
+    search_paths: list[str] = pydantic.Field(default_factory=list)
+    pkg_paths: list[str] = pydantic.Field(default_factory=list)
+    unreachable_mode: UnreachableModeEnum | None = None
 
     # extra packages
     # packages: List[str] = pydantic.Field(default_factory=list)
@@ -665,15 +630,15 @@ class CfgScope(_ScopeRules, extra="forbid"):
     #   e.g. limit=foo.bar, exclude=foo.bar.baz, include=foo.bar.baz.qux
     #   if order of include and exclude were swapped, then the exclude would
     #   remove the module after the include added it back in
-    limit: Optional[List[str]] = None
-    exclude: Optional[List[str]] = None
+    limit: list[str] | None = None
+    exclude: list[str] | None = None
     # include: Optional[str] = None  # NOT IMPLEMENTED BECAUSE IT IS REDUNDANT, AND `PARENTS` CAN BE USED INSTEAD
 
     # sub-scopes
     # - name to import path map
     # - names must be unique across all scopes & sub-scopes
     # - imports must belong to the scope
-    subscopes: Dict[str, str] = pydantic.Field(default_factory=dict)
+    subscopes: dict[str, str] = pydantic.Field(default_factory=dict)
 
     @pydantic.field_validator("search_paths", mode="before")
     @classmethod
@@ -703,7 +668,7 @@ class CfgScope(_ScopeRules, extra="forbid"):
             return {x: normalize_import_to_scope_name(x, strict=False) for x in v}
         return v
 
-    def make_module_scope(self, loaded_scopes: "LoadedScopes" = None):
+    def make_module_scope(self, loaded_scopes: "LoadedScopes | None" = None):
         m = ModulesScope()
 
         # 1. load parents
@@ -716,6 +681,9 @@ class CfgScope(_ScopeRules, extra="forbid"):
                         f"parent scope {repr(parent)} has not yet been created, are you sure the order of definitions is correct?"
                     )
                 m.add_modules_from_scope(loaded_scopes[parent])
+
+        # `set_defaults` (called before this) guarantees this is no longer `None`.
+        assert self.unreachable_mode is not None
 
         # 2. load new search paths and packages
         for path in self.search_paths:
@@ -768,7 +736,6 @@ class UndefinedScopeError(ValueError):
 
 
 class LoadedScopes:
-
     def __init__(self):
         self._scopes = {}
 
@@ -777,9 +744,7 @@ class LoadedScopes:
 
     def __getitem__(self, item: str) -> ModulesScope:
         if item not in self._scopes:
-            raise UndefinedScopeError(
-                f"scope {repr(item)} is not defined, must be one of: {self.sorted_names}"
-            )
+            raise UndefinedScopeError(f"scope {repr(item)} is not defined, must be one of: {self.sorted_names}")
         return self._scopes[item]
 
     def __setitem__(self, key, value):
@@ -789,7 +754,7 @@ class LoadedScopes:
         self._scopes[key] = value
 
     @property
-    def sorted_names(self) -> List[str]:
+    def sorted_names(self) -> list[str]:
         return sorted(self._scopes.keys())
 
 
@@ -804,21 +769,17 @@ class PydependenceCfg(pydantic.BaseModel, extra="forbid"):
     default_root: str = "."
 
     # default write modes
-    default_resolve_rules: _ResolveRules = pydantic.Field(
-        default_factory=_ResolveRules.make_default_base_rules
-    )
-    default_scope_rules: _ScopeRules = pydantic.Field(
-        default_factory=_ScopeRules.make_default_base_rules
-    )
+    default_resolve_rules: _ResolveRules = pydantic.Field(default_factory=_ResolveRules.make_default_base_rules)
+    default_scope_rules: _ScopeRules = pydantic.Field(default_factory=_ScopeRules.make_default_base_rules)
 
     # package versions
-    versions: List[CfgVersion] = pydantic.Field(default_factory=list)
+    versions: list[CfgVersion] = pydantic.Field(default_factory=list)
 
     # resolve
-    scopes: List[CfgScope] = pydantic.Field(default_factory=dict)
+    scopes: list[CfgScope] = pydantic.Field(default_factory=dict)
 
     # outputs
-    resolvers: List[CfgResolver] = pydantic.Field(default_factory=list)
+    resolvers: list[CfgResolver] = pydantic.Field(default_factory=list)
 
     @pydantic.field_validator("versions", mode="before")
     @classmethod
@@ -840,35 +801,30 @@ class PydependenceCfg(pydantic.BaseModel, extra="forbid"):
         return versions
 
     @pydantic.model_validator(mode="after")
-    @classmethod
-    def _validate_model(cls, cfg: "PydependenceCfg"):
+    def _validate_model(self) -> Self:
         # 1. check that scope names are all unique
         scope_names = set()
-        for scope in cfg.scopes:
+        for scope in self.scopes:
             if scope.name in scope_names:
                 raise ValueError(f"scope name {repr(scope.name)} is not unique!")
             scope_names.add(scope.name)
 
         # 2. check that all sub-scope names are unique
-        for scope in cfg.scopes:
+        for scope in self.scopes:
             for subscope_name in scope.subscopes:
                 if subscope_name in scope_names:
-                    raise ValueError(
-                        f"sub-scope name {repr(subscope_name)} is not unique!"
-                    )
+                    raise ValueError(f"sub-scope name {repr(subscope_name)} is not unique!")
                 scope_names.add(subscope_name)
 
         # 3. check that all packages
         # TODO
 
         # 4. check that the default root is a relative path
-        if Path(cfg.default_root).is_absolute():
-            raise ValueError(
-                f"default_root must be a relative path, got: {repr(cfg.default_root)}"
-            )
-        return cfg
+        if Path(self.default_root).is_absolute():
+            raise ValueError(f"default_root must be a relative path, got: {repr(self.default_root)}")
+        return self
 
-    def apply_defaults(self, *, config_path: "Union[str, Path]"):
+    def apply_defaults(self, *, config_path: "str | Path"):
         """
         config_path is the path to the pyproject.toml file or the toml file that was
         used to load the configuration. This is used to determine the default root path,
@@ -878,11 +834,9 @@ class PydependenceCfg(pydantic.BaseModel, extra="forbid"):
         config_path = Path(config_path)
 
         # helper
-        self.default_root = apply_root_to_path_str(
-            config_path.parent, self.default_root
-        )
+        self.default_root = apply_root_to_path_str(config_path.parent, self.default_root)
 
-        def _resolve_path(x: "Union[str, Path]") -> str:
+        def _resolve_path(x: "str | Path") -> str:
             return apply_root_to_path_str(self.default_root, x)
 
         # apply to all paths
@@ -893,21 +847,15 @@ class PydependenceCfg(pydantic.BaseModel, extra="forbid"):
             if output.output_file is not None:
                 output.output_file = _resolve_path(output.output_file)
             if output.output_file is None:
-                if isinstance(
-                    output, (_OutputPyprojectDeps, _OutputPyprojectOptionalDeps)
-                ):
+                if isinstance(output, (_OutputPyprojectDeps, _OutputPyprojectOptionalDeps)):
                     output.output_file = _resolve_path(config_path)
             # check kinds
             if isinstance(output, (_OutputPyprojectDeps, _OutputPyprojectOptionalDeps)):
                 if Path(output.output_file).name != "pyproject.toml":
-                    raise ValueError(
-                        f"output_file must be the pyproject.toml file for: {output}"
-                    )
+                    raise ValueError(f"output_file must be the pyproject.toml file for: {output}")
             elif isinstance(output, _OutputRequirements):
                 if Path(output.output_file).suffix != ".txt":
-                    raise ValueError(
-                        f"output_file must be requirements*.txt for: {output}"
-                    )
+                    raise ValueError(f"output_file must be requirements*.txt for: {output}")
 
         # also apply all default write modes
         self.default_scope_rules.set_defaults(_ScopeRules.make_default_base_rules())
@@ -925,9 +873,7 @@ class PydependenceCfg(pydantic.BaseModel, extra="forbid"):
             loaded_scopes[scope_cfg.name] = scope
             # now create sub-scopes
             for subcol_name, subcol_import_root in scope_cfg.subscopes.items():
-                subscope = scope.get_restricted_scope(
-                    imports=[subcol_import_root], mode=RestrictMode.CHILDREN
-                )
+                subscope = scope.get_restricted_scope(imports=[subcol_import_root], mode=RestrictMode.CHILDREN)
                 loaded_scopes[subcol_name] = subscope
         # done!
         return loaded_scopes
@@ -961,9 +907,7 @@ class PydependenceCfg(pydantic.BaseModel, extra="forbid"):
         for output in self.resolvers:
             name = output.get_output_extras_name()
             if name in names_all:
-                warnings.warn(
-                    f"output name {repr(name)} is not unique across all resolvers!"
-                )
+                warnings.warn(f"output name {repr(name)} is not unique across all resolvers!")
             names_all.add(name)
             if output.output_mode == OutputModeEnum.optional_dependencies:
                 if name in names_optional_deps:
@@ -1061,7 +1005,7 @@ class _PyprojectToml(pydantic.BaseModel, extra="ignore"):
 
 def pydeps(
     *,
-    config_path: Union[str, Path],
+    config_path: str | Path,
     dry_run: bool = False,
 ) -> bool:
     # 1. get absolute

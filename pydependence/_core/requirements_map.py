@@ -25,19 +25,15 @@ import abc
 import dataclasses
 import functools
 import warnings
-from typing import TYPE_CHECKING, Dict, List, NamedTuple, Optional, Set, Union
+from typing import TYPE_CHECKING
+from typing import NamedTuple
 
 from pydependence._core.builtin import BUILTIN_MODULE_NAMES
-from pydependence._core.module_imports_ast import (
-    BasicImportInfo,
-    LocImportInfo,
-    ManualImportInfo,
-)
-from pydependence._core.requirements_out import (
-    OutMappedRequirement,
-    OutMappedRequirements,
-    OutMappedRequirementSource,
-)
+from pydependence._core.module_imports_ast import BasicImportInfo
+from pydependence._core.module_imports_ast import ManualImportInfo
+from pydependence._core.requirements_out import OutMappedRequirement
+from pydependence._core.requirements_out import OutMappedRequirements
+from pydependence._core.requirements_out import OutMappedRequirementSource
 
 if TYPE_CHECKING:
     from pydependence._core.modules_scope import ModulesScope
@@ -53,7 +49,6 @@ DEFAULT_REQUIREMENTS_ENV = "default"
 
 
 class ImportMatcherBase(abc.ABC):
-
     @abc.abstractmethod
     def match(self, import_: str) -> bool:
         raise NotImplementedError
@@ -64,7 +59,6 @@ class ImportMatcherBase(abc.ABC):
 
 
 class ImportMatcherScope(ImportMatcherBase):
-
     def __init__(self, scope: "ModulesScope"):
         self.scope = scope
 
@@ -76,28 +70,22 @@ class ImportMatcherScope(ImportMatcherBase):
 
 
 class ImportMatcherGlob(ImportMatcherBase):
-
     def __init__(self, import_glob: str):
         self._orig = import_glob
         (*parts, last) = import_glob.split(".")
         # check all parts are identifiers, OR, at least one identifier with the last part being a glob
         if parts:
             if not all(str.isidentifier(x) for x in parts):
-                raise ValueError(
-                    f"parts of import glob {repr(import_glob)} are not valid identifiers"
-                )
+                raise ValueError(f"parts of import glob {repr(import_glob)} are not valid identifiers")
             if not (str.isidentifier(last) or last == "*"):
-                raise ValueError(
-                    f"last part of import glob {repr(import_glob)} is not a valid identifier or '*'"
-                )
+                raise ValueError(f"last part of import glob {repr(import_glob)} is not a valid identifier or '*'")
         else:
             if not str.isidentifier(last):
-                raise ValueError(
-                    f"last part of import glob {repr(import_glob)} is not a valid identifier"
-                )
+                raise ValueError(f"last part of import glob {repr(import_glob)} is not a valid identifier")
         # create glob
+        self._parts: tuple[str, ...]
         if last == "*":
-            self._parts = parts
+            self._parts = tuple(parts)
             self._wildcard = True
         else:
             self._parts = (*parts, last)
@@ -109,15 +97,14 @@ class ImportMatcherGlob(ImportMatcherBase):
             return import_ == self._base
         else:
             parts = import_.split(".")
-            return self._parts == parts[: len(self._parts)]
+            return self._parts == tuple(parts[: len(self._parts)])
 
     def cfg_str(self) -> str:
         return f"import={repr(self._orig)}"
 
 
 class ImportMatcherGlobs(ImportMatcherBase):
-
-    def __init__(self, import_globs: "Union[str, List[str]]"):
+    def __init__(self, import_globs: "str | list[str]"):
         if isinstance(import_globs, str):
             import_globs = import_globs.split(",")
         self._orig = ",".join(import_globs)
@@ -161,42 +148,37 @@ class MappedRequirementInfo(NamedTuple):
 @dataclasses.dataclass
 class MappedRequirementSource:
     source_module: str
-    source_module_imports: List[BasicImportInfo]
+    source_module_imports: list[BasicImportInfo]
 
     def to_output_requirement_source(self):
         return OutMappedRequirementSource(
             source_module=self.source_module,
             is_lazy=all(imp.is_lazy for imp in self.source_module_imports),
-            is_manual=any(
-                isinstance(imp, ManualImportInfo) for imp in self.source_module_imports
-            ),
+            is_manual=any(isinstance(imp, ManualImportInfo) for imp in self.source_module_imports),
         )
 
 
 @dataclasses.dataclass
 class MappedRequirement:
     requirement: str  # mapped name
-    sources: Dict[str, MappedRequirementSource]  # k == v.source_module
+    sources: dict[str, MappedRequirementSource]  # k == v.source_module
 
-    def get_sorted_sources(self) -> List[MappedRequirementSource]:
+    def get_sorted_sources(self) -> list[MappedRequirementSource]:
         return sorted(self.sources.values(), key=lambda x: x.source_module)
 
     def to_output_requirement(self):
         return OutMappedRequirement(
             requirement=self.requirement,
-            sources=[
-                source.to_output_requirement_source()
-                for source in self.get_sorted_sources()
-            ],
+            sources=[source.to_output_requirement_source() for source in self.get_sorted_sources()],
         )
 
 
 @dataclasses.dataclass
 class MappedRequirements:
-    requirements: Dict[str, MappedRequirement]  # k == v.requirement
-    resolver_name: Optional[str] = None
+    requirements: dict[str, MappedRequirement]  # k == v.requirement
+    resolver_name: str | None = None
 
-    def get_sorted_requirements(self) -> List[MappedRequirement]:
+    def get_sorted_requirements(self) -> list[MappedRequirement]:
         return sorted(
             self.requirements.values(),
             key=lambda x: x.requirement,
@@ -205,8 +187,7 @@ class MappedRequirements:
     def to_output_requirements(self):
         return OutMappedRequirements(
             requirements=[
-                requirement_info.to_output_requirement()
-                for requirement_info in self.get_sorted_requirements()
+                requirement_info.to_output_requirement() for requirement_info in self.get_sorted_requirements()
             ],
             resolver_name=self.resolver_name,
         )
@@ -218,8 +199,7 @@ class MappedRequirements:
 
 
 class NoConfiguredRequirementMappingError(ValueError):
-
-    def __init__(self, msg: str, imports: Set[str]):
+    def __init__(self, msg: str, imports: set[str]):
         self.msg = msg
         self.imports = imports
         super().__init__(msg)
@@ -235,11 +215,11 @@ class ReqMatcher:
 
 
 class RequirementsMapper:
-
     def __init__(
         self,
         *,
-        env_matchers: "Optional[Union[Dict[str, List[ReqMatcher]], List[ReqMatcher]]]",
+        # a `None` key is accepted as an alias for `DEFAULT_REQUIREMENTS_ENV`
+        env_matchers: "dict[str | None, list[ReqMatcher]] | list[ReqMatcher] | None",
     ):
         # env -> [(requirement, import matcher), ...]
         # * we use a list to maintain order, and then linear search. This is because
@@ -248,7 +228,10 @@ class RequirementsMapper:
         self._env_matchers = self._validate_env_matchers(env_matchers)
 
     @classmethod
-    def _validate_env_matchers(cls, env_matchers) -> "Dict[str, List[ReqMatcher]]":
+    def _validate_env_matchers(
+        cls,
+        env_matchers: "dict[str | None, list[ReqMatcher]] | list[ReqMatcher] | None",
+    ) -> "dict[str, list[ReqMatcher]]":
         # normalize
         if env_matchers is None:
             env_matchers = {}
@@ -263,36 +246,33 @@ class RequirementsMapper:
                 )
             env_matchers[DEFAULT_REQUIREMENTS_ENV] = env_matchers.pop(None)
 
-        # check
+        # check, and rebuild with `str` keys now that the `None` shift above is done.
         if not isinstance(env_matchers, dict):
-            raise ValueError(
-                f"env_matchers must be a dictionary, got: {type(env_matchers)}"
-            )
+            raise ValueError(f"env_matchers must be a dictionary, got: {type(env_matchers)}")
+        validated: dict[str, list[ReqMatcher]] = {}
         for env, matchers in env_matchers.items():
+            assert env is not None  # the `None` key was shifted above
             if not isinstance(matchers, list):
-                raise ValueError(
-                    f"env_matchers must be a dictionary of lists, got: {type(matchers)}"
-                )
+                raise ValueError(f"env_matchers must be a dictionary of lists, got: {type(matchers)}")
             for matcher in matchers:
                 if not isinstance(matcher, ReqMatcher):
                     raise ValueError(
                         f"env_matchers must be a dictionary of lists of ReqMatcherPair, got: {type(matcher)}, {matcher}"
                     )
                 if not isinstance(matcher.requirement, str):
-                    raise ValueError(
-                        f"requirement must be a string, got: {type(matcher.requirement)}"
-                    )
+                    raise ValueError(f"requirement must be a string, got: {type(matcher.requirement)}")
                 if not isinstance(matcher.matcher, ImportMatcherBase):
                     raise ValueError(
                         f"matcher must be an ImportMatcherBase, got: {type(matcher.matcher)}, {matcher.matcher}"
                     )
-        return env_matchers
+            validated[env] = matchers
+        return validated
 
     def map_import_to_requirement(
         self,
         import_: str,
         *,
-        requirements_env: "Optional[str]" = None,
+        requirements_env: "str | None" = None,
         strict: bool = False,
     ) -> str:
         req_info = self.map_import_to_requirement_info(
@@ -307,7 +287,7 @@ class RequirementsMapper:
         self,
         import_: str,
         *,
-        requirements_env: "Optional[str]" = None,
+        requirements_env: "str | None" = None,
         strict: bool = False,
     ) -> "MappedRequirementInfo":
         """
@@ -318,9 +298,7 @@ class RequirementsMapper:
         # 1. take the specific env
         if requirements_env != DEFAULT_REQUIREMENTS_ENV:
             if requirements_env not in self._env_matchers:
-                raise ValueError(
-                    f"env: {repr(requirements_env)} has not been defined for a requirement."
-                )
+                raise ValueError(f"env: {repr(requirements_env)} has not been defined for a requirement.")
             for rm in self._env_matchers[requirements_env]:
                 if rm.matcher.match(import_):
                     return MappedRequirementInfo(
@@ -355,8 +333,8 @@ class RequirementsMapper:
 
     def _get_joined_matchers(
         self,
-        requirements_env: "Optional[str]" = None,
-    ) -> "List[ReqMatcher]":
+        requirements_env: "str | None" = None,
+    ) -> "list[ReqMatcher]":
         if requirements_env is None:
             requirements_env = DEFAULT_REQUIREMENTS_ENV
         matchers = self._env_matchers.get(requirements_env, [])
@@ -364,22 +342,17 @@ class RequirementsMapper:
             matchers = self._env_matchers.get(DEFAULT_REQUIREMENTS_ENV, []) + matchers
         return matchers
 
-    def _get_matcher_cfg_sting(self, requirements_env: "Optional[str]" = None) -> "str":
-        return ", ".join(
-            [
-                rm.cfg_str()
-                for rm in self._get_joined_matchers(requirements_env=requirements_env)
-            ]
-        )
+    def _get_matcher_cfg_sting(self, requirements_env: "str | None" = None) -> "str":
+        return ", ".join([rm.cfg_str() for rm in self._get_joined_matchers(requirements_env=requirements_env)])
 
     def generate_mapped_requirements(
         self,
-        imports: "List[BasicImportInfo]",
+        imports: "list[BasicImportInfo]",
         *,
-        requirements_env: "Optional[str]" = None,
+        requirements_env: "str | None" = None,
         strict: bool = False,
-        raw: List[str] = None,
-        resolver_name: Optional[str] = None,
+        raw: "list[str] | None" = None,
+        resolver_name: str | None = None,
     ) -> "MappedRequirements":
         """
         Map imports to requirements, returning the imports grouped by the requirement.
@@ -461,11 +434,11 @@ class RequirementsMapper:
 
     def generate_output_requirements(
         self,
-        imports: "List[BasicImportInfo]",
+        imports: "list[BasicImportInfo]",
         *,
-        requirements_env: "Optional[str]" = None,
+        requirements_env: "str | None" = None,
         strict: bool = False,
-        resolver_name: Optional[str] = None,
+        resolver_name: str | None = None,
     ) -> "OutMappedRequirements":
         """
         :raises NoConfiguredRequirementMappingError: if no requirement is found for any import, but only if strict mode is enabled.

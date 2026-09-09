@@ -49,7 +49,6 @@ versions = [
     {requirement="pydependence", scope="pydependence"},
     "pytest>=6",
     "pytest-cov>=4",
-    "typing-extensions",
 ]
 
 # Scopes represent graphs of modules (nodes) and their interconnecting
@@ -87,11 +86,8 @@ authors = [{name = "Nathan Michlo", email = "nathanjmichlo@gmail.com"}]
 readme = "README.md"
 license = {file="LICENSE"}
 classifiers = [
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
@@ -103,7 +99,7 @@ classifiers = [
 # !!! do not modify this section manually !!! #
 # - - - - - - - - - - - - - - - - - - - - - - #
 
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 dependencies = [
     # [AUTOGEN] by pydependence resolver 'pydependence' **DO NOT EDIT** [AUTOGEN]
     "networkx",
@@ -115,8 +111,6 @@ dependencies = [
     #     ← pydependence._cli
     "stdlib_list",
     #     ← pydependence._core.builtin
-    "typing-extensions",
-    #     ← pydependence._cli
 ]
 
 # - - - - - - - - - - - - - - - - - - - - - - #
@@ -153,8 +147,6 @@ test = [
     #     ← [L] pydependence._core.requirements_out
     #     ← [L] pydependence._core.utils
     #     ← [L] tests.test_module_data
-    "typing-extensions",
-    #     ← pydependence._cli
 ]
 some = [
     # [AUTOGEN] by pydependence resolver 'some' **DO NOT EDIT** [AUTOGEN]
@@ -167,8 +159,6 @@ some = [
     #     ← pydependence._cli
     "stdlib_list",
     #     ← pydependence._core.builtin
-    "typing-extensions",
-    #     ← pydependence._cli
 ]
 all = [
     # [AUTOGEN] by pydependence resolver 'all' **DO NOT EDIT** [AUTOGEN]
@@ -184,8 +174,6 @@ all = [
     "tomlkit", # [L]
     #     ← [L] pydependence._core.requirements_out
     #     ← [L] pydependence._core.utils
-    "typing-extensions",
-    #     ← pydependence._cli
 ]
 core = [
     # [AUTOGEN] by pydependence resolver 'core' **DO NOT EDIT** [AUTOGEN]
@@ -209,8 +197,6 @@ example-core-no-lazy = [
     #     ← pydependence._cli
     "stdlib_list",
     #     ← pydependence._core.builtin
-    "typing-extensions",
-    #     ← pydependence._cli
 ]
 example-legacy = [
     # [AUTOGEN] by pydependence resolver 'example-legacy' **DO NOT EDIT** [AUTOGEN]
@@ -226,6 +212,58 @@ example-legacy = [
     "tomlkit", # [L]
     #     ← [L] pydependence._core.requirements_out
     #     ← [L] pydependence._core.utils
-    "typing-extensions",
-    #     ← pydependence._cli
 ]
+
+
+# ========================================================================= #
+# RUFF                                                                      #
+# ========================================================================= #
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+# these are AST fixtures: fake modules with imports to non-existent packages, parsed
+# only via `ast.parse` and never executed. exact bytes (imports, blank lines) are the
+# test data -- lint/format would "fix" them into something the tests no longer match.
+# `force-exclude` is required so this also applies when pre-commit passes these files
+# in explicitly (it only passes changed files, not whole directories).
+extend-exclude = ["tests/test-packages"]
+force-exclude = true
+
+[tool.ruff.lint]
+# `E4/E7/E9 + F` is the ruff default, `I` adds import sorting (previously isort).
+# `UP` modernises syntax for the python floor, including PEP 695 generics.
+# `TID251` enforces the banned-api list below.
+# `B009`/`B010` ban `getattr(x, "const")` / `setattr(x, "const", v)` -- write `x.const`.
+select = ["E4", "E7", "E9", "F", "I", "UP", "TID251", "B009", "B010"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"typing.Any".msg = "Any disables type checking wherever it appears. Use a precise type, a TypeVar, a Protocol, or a dedicated sentinel class."
+"typing.cast".msg = "cast asserts a type the checker cannot verify. Narrow with isinstance/assert, or fix the annotation."
+
+[tool.ruff.lint.isort]
+# previously `isort --profile=black --force-single-line-imports`
+force-single-line = true
+
+[tool.ruff.lint.per-file-ignores]
+# `__init__.py` files are re-export hubs -- unsorted and "unused" imports are the point.
+"**/__init__.py" = ["F401", "I001"]
+
+
+
+# ========================================================================= #
+# TY                                                                        #
+# ========================================================================= #
+
+# ty runs as a pre-commit hook and gates CI. it needs the dependencies resolvable
+# and auto-detects `.venv`, so create one first:
+#     uv venv --python 3.12 .venv && uv pip install --python .venv -e ".[test]"
+#     uvx ty check
+
+[tool.ty.environment]
+python-version = "3.12"
+
+[tool.ty.src]
+# AST fixtures with imports to non-existent packages -- never meant to type-check,
+# only to be parsed via `ast.parse` by the import-parser tests.
+exclude = ["tests/test-packages"]

@@ -25,29 +25,23 @@
 
 import ast
 import dataclasses
-import sys
 import warnings
-from collections import Counter, defaultdict
-from enum import Enum
-from typing import DefaultDict, Dict, List, Literal, NamedTuple, Optional, Tuple
+from collections import Counter
+from collections import defaultdict
+from enum import StrEnum
+from typing import Literal
 
 from pydependence._core.module_data import ModuleMetadata
-from pydependence._core.utils import assert_valid_import_name, assert_valid_module_path
+from pydependence._core.utils import assert_valid_import_name
+from pydependence._core.utils import assert_valid_module_path
 
 # ========================================================================= #
-# Polyfill                                                                  #
+# Helpers                                                                   #
 # ========================================================================= #
 
 
 def ast_unparse(node: ast.AST) -> str:
-    # if not python 3.8 then call ast.unparse, otherwise polyfill
-    if hasattr(ast, "unparse"):
-        return ast.unparse(node)
-    else:
-        warnings.warn(
-            f"Current version of python: {sys.version_info} does not support `ast.unparse`"
-        )
-        return str(node)
+    return ast.unparse(node)
 
 
 # ========================================================================= #
@@ -150,7 +144,7 @@ _LAZY_CALLABLES = {*_LAZY_IMPORT_CALLABLES, *_LAZY_ATTRIBUTE_CALLABLES}
 # ========================================================================= #
 
 
-class ImportSourceEnum(str, Enum):
+class ImportSourceEnum(StrEnum):
     import_ = "import_"
     import_from = "import_from"
     lazy_plugin = "lazy_plugin"
@@ -217,7 +211,7 @@ class LocImportInfo(BasicImportInfo):
     # debug
     lineno: int
     col_offset: int
-    stack_type_names: Tuple[str, ...]
+    stack_type_names: tuple[str, ...]
     # relative import
     is_relative: bool
 
@@ -231,17 +225,16 @@ class LocImportInfo(BasicImportInfo):
 
 
 class _AstImportsCollector(ast.NodeVisitor):
-
     def __init__(self, module_info: ModuleMetadata):
         self._module_info: ModuleMetadata = module_info
-        self._imports: "DefaultDict[str, List[LocImportInfo]]" = defaultdict(list)
-        self._stack_is_lazy: "List[bool]" = [False]
-        self._stack_ast_kind: "List[str]" = []
+        self._imports: defaultdict[str, list[LocImportInfo]] = defaultdict(list)
+        self._stack_is_lazy: list[bool] = [False]
+        self._stack_ast_kind: list[str] = []
         self._counter = Counter()
 
     # ~=~=~ WARN ~=~=~ #
 
-    def _node_warn(self, node: ast.AST, message: str):
+    def _node_warn(self, node: "ast.stmt | ast.expr", message: str):
         warnings.warn_explicit(
             message=f"`{ast_unparse(node)}`: {message}",
             category=SyntaxWarning,
@@ -253,10 +246,10 @@ class _AstImportsCollector(ast.NodeVisitor):
 
     def _push_current_import(
         self,
-        node: ast.AST,
+        node: "ast.stmt | ast.expr",
         target: str,
         source_type: ImportSourceEnum,
-        is_lazy: "Optional[bool]" = None,
+        is_lazy: "bool | None" = None,
         is_relative: bool = False,
     ):
         import_ = LocImportInfo(
@@ -324,10 +317,14 @@ class _AstImportsCollector(ast.NodeVisitor):
             _parts = self._module_info.name.split(".")
             if not self._module_info.ispkg:
                 _parts.pop()
-            _parts.append(node.module)
+            # `node.module` is `None` for a bare `from . import x`, i.e. there is no
+            # submodule component to append, the target is the package itself.
+            if node.module:
+                _parts.append(node.module)
             target = ".".join(_parts)
             assert_valid_import_name(target)
         else:
+            assert node.module is not None  # only `None` when `level != 0` (relative)
             target = node.module
         self._push_current_import(
             node=node,
@@ -387,20 +384,16 @@ class _AstImportsCollector(ast.NodeVisitor):
             return
         # - make sure no keyword arguments are used, these invalidate the import.
         if node.keywords:
-            self._node_warn(node, f"should not have keyword arguments.")
+            self._node_warn(node, "should not have keyword arguments.")
             return
         # - make sure that the function is called with a single string argument
         if not len(node.args) == 1:
-            self._node_warn(
-                node, f"called with {len(node.args)} arguments, expected: 1"
-            )
+            self._node_warn(node, f"called with {len(node.args)} arguments, expected: 1")
             return
         [arg] = node.args
         # - make sure that the argument is a string
         if not isinstance(arg, ast.Constant) or not isinstance(arg.value, str):
-            self._node_warn(
-                node, f"called with non-string argument: `{ast_unparse(arg)}`"
-            )
+            self._node_warn(node, f"called with non-string argument: `{ast_unparse(arg)}`")
             return
         # - validate the import string
         import_ = arg.value
@@ -413,9 +406,7 @@ class _AstImportsCollector(ast.NodeVisitor):
         if name in _LAZY_ATTRIBUTE_CALLABLES:
             _parts = import_.rsplit(".", maxsplit=1)
             if len(_parts) < 2:
-                self._node_warn(
-                    node, f"called with invalid import path to an attribute: {import_}"
-                )
+                self._node_warn(node, f"called with invalid import path to an attribute: {import_}")
                 return
             import_ = _parts[0]
         # - add the import
@@ -440,7 +431,7 @@ class _AstImportsCollector(ast.NodeVisitor):
     @classmethod
     def load_imports_from_module_info(
         cls, module_info: ModuleMetadata, *, debug: bool = False
-    ) -> "Dict[str, List[LocImportInfo]]":
+    ) -> "dict[str, list[LocImportInfo]]":
         # load the file & parse
         path = assert_valid_module_path(module_info.path)
         name = assert_valid_import_name(module_info.name)
@@ -454,16 +445,14 @@ class _AstImportsCollector(ast.NodeVisitor):
         if debug:
             total = sum(_parser._counter.values())
             top = _parser._counter.most_common(5)
-            print(
-                f"Visited {total} nodes, top 5: {top} for module: {repr(name)} file: {module_info.path}"
-            )
+            print(f"Visited {total} nodes, top 5: {top} for module: {repr(name)} file: {module_info.path}")
         # done!
         return _parser._imports
 
 
 def load_imports_from_module_info(
     module_info: ModuleMetadata,
-) -> "Dict[str, List[LocImportInfo]]":
+) -> "dict[str, list[LocImportInfo]]":
     return _AstImportsCollector.load_imports_from_module_info(module_info)
 
 
