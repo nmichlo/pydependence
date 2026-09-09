@@ -29,39 +29,27 @@ import pytest
 
 from pydependence._cli import pydeps
 from pydependence._core.module_data import ModuleMetadata
-from pydependence._core.module_imports_ast import (
-    ImportSourceEnum,
-    LocImportInfo,
-    ManualImportInfo,
-    load_imports_from_module_info,
-)
-from pydependence._core.module_imports_loader import (
-    DEFAULT_MODULE_IMPORTS_LOADER,
-    ModuleImports,
-)
-from pydependence._core.modules_resolver import (
-    ScopeNotASubsetError,
-    ScopeResolvedImports,
-)
-from pydependence._core.modules_scope import (
-    DuplicateModuleNamesError,
-    DuplicateModulePathsError,
-    DuplicateModulesError,
-    ModulesScope,
-    UnreachableModeEnum,
-    UnreachableModuleError,
-    _find_modules,
-)
-from pydependence._core.requirements_map import (
-    DEFAULT_REQUIREMENTS_ENV,
-    ImportMatcherBase,
-    ImportMatcherGlob,
-    ImportMatcherScope,
-    NoConfiguredRequirementMappingError,
-    ReqMatcher,
-    RequirementsMapper,
-)
-from pydependence._core.utils import load_toml_document, toml_file_replace_array
+from pydependence._core.module_imports_ast import ImportSourceEnum
+from pydependence._core.module_imports_ast import LocImportInfo
+from pydependence._core.module_imports_ast import ManualImportInfo
+from pydependence._core.module_imports_ast import load_imports_from_module_info
+from pydependence._core.module_imports_loader import DEFAULT_MODULE_IMPORTS_LOADER
+from pydependence._core.modules_resolver import ScopeNotASubsetError
+from pydependence._core.modules_resolver import ScopeResolvedImports
+from pydependence._core.modules_scope import DuplicateModuleNamesError
+from pydependence._core.modules_scope import DuplicateModulePathsError
+from pydependence._core.modules_scope import DuplicateModulesError
+from pydependence._core.modules_scope import ModulesScope
+from pydependence._core.modules_scope import UnreachableModeEnum
+from pydependence._core.modules_scope import UnreachableModuleError
+from pydependence._core.modules_scope import _find_modules
+from pydependence._core.requirements_map import ImportMatcherGlob
+from pydependence._core.requirements_map import ImportMatcherScope
+from pydependence._core.requirements_map import NoConfiguredRequirementMappingError
+from pydependence._core.requirements_map import ReqMatcher
+from pydependence._core.requirements_map import RequirementsMapper
+from pydependence._core.utils import load_toml_document
+from pydependence._core.utils import toml_file_replace_array
 
 # ========================================================================= #
 # fixture                                                                   #
@@ -226,6 +214,24 @@ def test_get_module_imports(module_info):
     assert results_2 is results_3
 
 
+def test_get_module_imports_bare_relative(tmp_path):
+    # `from . import x` has `node.module is None` (unlike `from .sub import x`), which
+    # used to crash `visit_ImportFrom` with `TypeError: sequence item 1: expected str
+    # instance, NoneType found`.
+    (tmp_path / "pkg").mkdir()
+    (tmp_path / "pkg" / "__init__.py").touch()
+    mod_path = tmp_path / "pkg" / "mod.py"
+    mod_path.write_text("from . import x\n")
+
+    module_info = ModuleMetadata(path=mod_path, name="pkg.mod", ispkg=False, tag="test")
+    results = load_imports_from_module_info(module_info)
+
+    assert set(results.keys()) == {"pkg"}
+    [import_] = results["pkg"]
+    assert import_.target == "pkg"
+    assert import_.is_relative is True
+
+
 # ========================================================================= #
 # TESTS - FIND MODULES                                                      #
 # ========================================================================= #
@@ -256,10 +262,7 @@ def test_find_modules_search_path(module_info):
         ("B", "B.b1"),
         ("B", "B.b2"),
     }
-    # not included!
-    edges_unreachable = {
-        ("A.a4", "A.a4.a4i"),
-    }
+    # not included: ("A.a4", "A.a4.a4i")
 
     # load all modules (default)
     results = _find_modules(
@@ -282,9 +285,7 @@ def test_find_modules_search_path(module_info):
     assert set(results.edges) == edges_reachable
 
     # error if unreachable
-    with pytest.raises(
-        UnreachableModuleError, match="Unreachable module found: A.a4.a4i from root: A"
-    ):
+    with pytest.raises(UnreachableModuleError, match="Unreachable module found: A.a4.a4i from root: A"):
         _find_modules(
             search_paths=[PKGS_ROOT],
             package_paths=None,
@@ -361,9 +362,7 @@ def test_find_modules_pkg_path():
     assert set(results.nodes) == reachable_a
 
     # error if unreachable
-    with pytest.raises(
-        UnreachableModuleError, match="Unreachable module found: A.a4.a4i from root: A"
-    ):
+    with pytest.raises(UnreachableModuleError, match="Unreachable module found: A.a4.a4i from root: A"):
         _find_modules(
             search_paths=None,
             package_paths=[PKG_A],
@@ -421,28 +420,20 @@ def test_modules_scope():
     modules_all = modules_a | modules_b | modules_c | modules_d | {"t_ast_parser"}
 
     scope = ModulesScope()
-    scope.add_modules_from_package_path(
-        PKG_A, unreachable_mode=UnreachableModeEnum.keep
-    )
+    scope.add_modules_from_package_path(PKG_A, unreachable_mode=UnreachableModeEnum.keep)
     assert set(scope.iter_modules()) == modules_a
     # this should not edit the original if it fails
     with pytest.raises(DuplicateModulePathsError):
-        scope.add_modules_from_package_path(
-            PKG_A / "a1.py", unreachable_mode=UnreachableModeEnum.keep
-        )
+        scope.add_modules_from_package_path(PKG_A / "a1.py", unreachable_mode=UnreachableModeEnum.keep)
     with pytest.raises(DuplicateModulePathsError):
-        scope.add_modules_from_package_path(
-            PKG_A, unreachable_mode=UnreachableModeEnum.keep
-        )
+        scope.add_modules_from_package_path(PKG_A, unreachable_mode=UnreachableModeEnum.keep)
     assert set(scope.iter_modules()) == modules_a
     # handle unreachable
     with pytest.raises(UnreachableModuleError):
         scope.add_modules_from_package_path(PKG_A)
 
     scope = ModulesScope()
-    scope.add_modules_from_search_path(
-        PKGS_ROOT, unreachable_mode=UnreachableModeEnum.keep
-    )
+    scope.add_modules_from_search_path(PKGS_ROOT, unreachable_mode=UnreachableModeEnum.keep)
     assert set(scope.iter_modules()) == modules_all
 
     scope = ModulesScope()
@@ -453,17 +444,13 @@ def test_modules_scope():
 
     # merge scopes & check subsets
     scope_all = ModulesScope()
-    scope_all.add_modules_from_search_path(
-        PKGS_ROOT, unreachable_mode=UnreachableModeEnum.keep
-    )
+    scope_all.add_modules_from_search_path(PKGS_ROOT, unreachable_mode=UnreachableModeEnum.keep)
     assert set(scope_all.iter_modules()) == modules_all
     with pytest.raises(UnreachableModuleError):
         scope_all.add_modules_from_search_path(PKGS_ROOT)
 
     scope_a = ModulesScope()
-    scope_a.add_modules_from_package_path(
-        PKG_A, unreachable_mode=UnreachableModeEnum.keep
-    )
+    scope_a.add_modules_from_package_path(PKG_A, unreachable_mode=UnreachableModeEnum.keep)
     assert set(scope_a.iter_modules()) == modules_a
     with pytest.raises(UnreachableModuleError):
         scope_a.add_modules_from_package_path(PKG_A)
@@ -547,9 +534,7 @@ def test_resolve_scope():
 
 def test_resolve_across_scopes():
     scope_all = ModulesScope()
-    scope_all.add_modules_from_package_path(
-        package_path=PKG_A, unreachable_mode=UnreachableModeEnum.keep
-    )
+    scope_all.add_modules_from_package_path(package_path=PKG_A, unreachable_mode=UnreachableModeEnum.keep)
     scope_all.add_modules_from_package_path(package_path=PKG_B)
     scope_all.add_modules_from_package_path(package_path=PKG_C)
     scope_all.add_modules_from_package_path(package_path=PKG_D)
@@ -624,9 +609,7 @@ def test_resolve_across_scopes():
         "extern_a4i": {"A.a4.a4i": 1},
     }
 
-    resolved_all_a = ScopeResolvedImports.from_scope(
-        scope=scope_all, start_scope=scope_a
-    )
+    resolved_all_a = ScopeResolvedImports.from_scope(scope=scope_all, start_scope=scope_a)
     assert resolved_all_a._get_targets_sources_counts() == {
         "A.a2": {"A.a1": 1},
         "A.a4.a4i": {"A.a3.a3i": 1},
@@ -673,9 +656,7 @@ def test_resolve_across_scopes():
         "extern_b2": {"B.b2": 1},
     }
 
-    resolved_all_b = ScopeResolvedImports.from_scope(
-        scope=scope_all, start_scope=scope_b
-    )
+    resolved_all_b = ScopeResolvedImports.from_scope(scope=scope_all, start_scope=scope_b)
     assert resolved_all_b._get_targets_sources_counts() == {
         "B.b2": {"B.b1": 1},
         "C": {"B.b2": 2},
@@ -703,9 +684,7 @@ def test_resolve_across_scopes():
         "C": {"B.b2": 1},
         "extern_C": {"C": 1},
     }
-    assert _resolved_b.get_filtered()._get_targets_sources_counts() == {
-        "extern_C": {"C": 1}
-    }
+    assert _resolved_b.get_filtered()._get_targets_sources_counts() == {"extern_C": {"C": 1}}
 
     _resolved_b = ScopeResolvedImports.from_scope(
         scope=scope_all,
@@ -747,9 +726,7 @@ def test_resolve_across_scopes():
         "B.b2": {"B.b1": 1},
         "extern_b1": {"B.b1": 1},
     }
-    assert _resolved_b.get_filtered()._get_targets_sources_counts() == {
-        "extern_b1": {"B.b1": 1}
-    }
+    assert _resolved_b.get_filtered()._get_targets_sources_counts() == {"extern_b1": {"B.b1": 1}}
 
     # >>> C <<< #
 
@@ -763,9 +740,7 @@ def test_resolve_across_scopes():
         "lazy_D": {"C": 1},
     }
 
-    resolved_all_c = ScopeResolvedImports.from_scope(
-        scope=scope_all, start_scope=scope_c
-    )
+    resolved_all_c = ScopeResolvedImports.from_scope(scope=scope_all, start_scope=scope_c)
     assert resolved_all_c._get_targets_sources_counts() == {
         "extern_C": {"C": 1},
         "extern_D": {"lazy_D": 1},
@@ -786,9 +761,7 @@ def test_resolve_across_scopes():
 
 def test_import_matchers():
     scope_a = ModulesScope()
-    scope_a.add_modules_from_package_path(
-        PKG_A, unreachable_mode=UnreachableModeEnum.keep
-    )
+    scope_a.add_modules_from_package_path(PKG_A, unreachable_mode=UnreachableModeEnum.keep)
     scope_b = ModulesScope()
     scope_b.add_modules_from_package_path(PKG_B)
 
@@ -850,9 +823,7 @@ def test_import_matchers():
 
 
 def test_requirement_mapping():
-    scope_all = ModulesScope().add_modules_from_search_path(
-        PKGS_ROOT, unreachable_mode=UnreachableModeEnum.keep
-    )
+    scope_all = ModulesScope().add_modules_from_search_path(PKGS_ROOT, unreachable_mode=UnreachableModeEnum.keep)
     scope_a = scope_all.get_restricted_scope(imports=["A"])
     scope_b = scope_all.get_restricted_scope(imports=["B"])
 
@@ -875,7 +846,9 @@ def test_requirement_mapping():
     )
 
     # test
-    m = lambda x: mapper.map_import_to_requirement(x, requirements_env="default")
+    def m(x: str) -> str:
+        return mapper.map_import_to_requirement(x, requirements_env="default")
+
     # in order:
     assert m("A.a3.a3i") == "glob_Aa3"
     assert m("A.a4") == "glob_A"
@@ -888,7 +861,9 @@ def test_requirement_mapping():
     assert m("asdf.fdsa") == "asdf"  # take root
 
     # test alt
-    m = lambda x: mapper.map_import_to_requirement(x, requirements_env="asdf")
+    def m(x: str) -> str:
+        return mapper.map_import_to_requirement(x, requirements_env="asdf")
+
     # in order:
     assert m("A.a3.a3i") == "ALT_glob_Aa3"
     assert m("A.a4") == "glob_A"
@@ -939,9 +914,7 @@ def mapper():
 
 
 def test_requirements_list_generation(mapper: RequirementsMapper):
-    scope_all = ModulesScope().add_modules_from_search_path(
-        PKGS_ROOT, unreachable_mode=UnreachableModeEnum.keep
-    )
+    scope_all = ModulesScope().add_modules_from_search_path(PKGS_ROOT, unreachable_mode=UnreachableModeEnum.keep)
     scope_a = scope_all.get_restricted_scope(imports=["A"])
 
     # >>> SCOPE A <<< #
@@ -998,9 +971,7 @@ def test_requirements_list_generation(mapper: RequirementsMapper):
         ("lazy_E", ["lazy_D"]),
     ]
 
-    imports = scope_all.resolve_imports(
-        start_scope=scope_a, exclude_in_search_space=False
-    )
+    imports = scope_all.resolve_imports(start_scope=scope_a, exclude_in_search_space=False)
     mapped = mapper.generate_output_requirements(imports, requirements_env="asdf")
     assert mapped._get_debug_struct() == [
         ("A", ["A.a1", "A.a3.a3i"]),
@@ -1014,9 +985,7 @@ def test_requirements_list_generation(mapper: RequirementsMapper):
 
     # >>> SCOPE ALL, FILTERED <<< #
 
-    imports = scope_all.resolve_imports(
-        exclude_in_search_space=False, exclude_builtins=False
-    )
+    imports = scope_all.resolve_imports(exclude_in_search_space=False, exclude_builtins=False)
     mapped = mapper.generate_output_requirements(imports, requirements_env="asdf")
     assert mapped._get_debug_struct() == [
         ("A", ["A.a1", "A.a3.a3i"]),
@@ -1035,9 +1004,7 @@ def test_requirements_list_generation(mapper: RequirementsMapper):
         ("sys", ["t_ast_parser"]),
     ]
 
-    imports = scope_all.resolve_imports(
-        exclude_in_search_space=True, exclude_builtins=False
-    )
+    imports = scope_all.resolve_imports(exclude_in_search_space=True, exclude_builtins=False)
     mapped = mapper.generate_output_requirements(imports, requirements_env="asdf")
     assert mapped._get_debug_struct() == [
         ("asdf", ["t_ast_parser"]),
@@ -1073,9 +1040,7 @@ def test_requirements_list_generation(mapper: RequirementsMapper):
 
 
 def test_requirements_txt_gen(mapper: RequirementsMapper):
-    scope_all = ModulesScope().add_modules_from_search_path(
-        PKGS_ROOT, unreachable_mode=UnreachableModeEnum.keep
-    )
+    scope_all = ModulesScope().add_modules_from_search_path(PKGS_ROOT, unreachable_mode=UnreachableModeEnum.keep)
 
     # >>> GENERATE REQUIREMENTS <<< #
 
@@ -1100,7 +1065,7 @@ def test_requirements_txt_gen(mapper: RequirementsMapper):
         sources_compact=True,
         sources_roots=True,
         indent_size=4,
-    ) == ("extern_D\nfoo\n" "glob_extern\n" "package\n")
+    ) == ("extern_D\nfoo\nglob_extern\npackage\n")
 
     assert mapped.as_requirements_txt(
         notice=True,
@@ -1108,13 +1073,7 @@ def test_requirements_txt_gen(mapper: RequirementsMapper):
         sources_compact=True,
         sources_roots=True,
         indent_size=4,
-    ) == (
-        "# [AUTOGEN] by pydependence **DO NOT EDIT** [AUTOGEN]\n"
-        "extern_D\n"
-        "foo\n"
-        "glob_extern\n"
-        "package\n"
-    )
+    ) == ("# [AUTOGEN] by pydependence **DO NOT EDIT** [AUTOGEN]\nextern_D\nfoo\nglob_extern\npackage\n")
 
     assert mapped.as_requirements_txt(
         notice=False,
@@ -1122,11 +1081,7 @@ def test_requirements_txt_gen(mapper: RequirementsMapper):
         sources_compact=True,
         sources_roots=True,
         indent_size=4,
-    ) == (
-        "extern_D # lazy_D\nfoo # t_ast_parser\n"
-        "glob_extern # A, C\n"
-        "package # t_ast_parser\n"
-    )
+    ) == ("extern_D # lazy_D\nfoo # t_ast_parser\nglob_extern # A, C\npackage # t_ast_parser\n")
 
     assert mapped.as_requirements_txt(
         notice=False,
@@ -1182,9 +1137,7 @@ def test_requirements_txt_gen(mapper: RequirementsMapper):
 
 
 def test_toml_array_gen(mapper: RequirementsMapper):
-    scope_all = ModulesScope().add_modules_from_search_path(
-        PKGS_ROOT, unreachable_mode=UnreachableModeEnum.keep
-    )
+    scope_all = ModulesScope().add_modules_from_search_path(PKGS_ROOT, unreachable_mode=UnreachableModeEnum.keep)
 
     # >>> GENERATE REQUIREMENTS <<< #
 
@@ -1208,14 +1161,7 @@ def test_toml_array_gen(mapper: RequirementsMapper):
         sources_compact=True,
         sources_roots=True,
         indent_size=4,
-    ).as_string() == (
-        "[\n"
-        '    "extern_D",\n'
-        '    "foo",\n'
-        '    "glob_extern",\n'
-        '    "package",\n'
-        "]"
-    )
+    ).as_string() == ('[\n    "extern_D",\n    "foo",\n    "glob_extern",\n    "package",\n]')
 
     assert mapped.as_toml_array(
         notice=True,
@@ -1380,11 +1326,7 @@ def test_pydeps_cli():
 
     # 1. load original document
     orig_project_deps = doc["project"].get("dependencies", tomlkit.array())
-    orig_optional_deps = (
-        doc["project"]
-        .get("optional-dependencies", tomlkit.table())
-        .get("all", tomlkit.array())
-    )
+    orig_optional_deps = doc["project"].get("optional-dependencies", tomlkit.table()).get("all", tomlkit.array())
 
     # 2. replace arrays
     toml_file_replace_array(
@@ -1470,16 +1412,11 @@ def test_pydeps_cli_main():
         check=False,
     )
     assert result.returncode == 0
-    assert (
-        b"PyDependence: A tool for scanning and resolving python dependencies"
-        in result.stdout
-    )
+    assert b"PyDependence: A tool for scanning and resolving python dependencies" in result.stdout
     assert result.stderr == b""
 
     # run the cli
-    result = subprocess.run(
-        [sys.executable, "-m", "pydependence"], capture_output=True, check=False
-    )
+    result = subprocess.run([sys.executable, "-m", "pydependence"], capture_output=True, check=False)
     assert result.returncode != 0
     assert result.stdout == b""
     assert b"arguments are required: config" in result.stderr
