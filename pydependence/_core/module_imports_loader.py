@@ -24,13 +24,10 @@
 
 
 import dataclasses
-from typing import Dict, List, Tuple
 
 from pydependence._core.module_data import ModuleMetadata
-from pydependence._core.module_imports_ast import (
-    LocImportInfo,
-    load_imports_from_module_info,
-)
+from pydependence._core.module_imports_ast import LocImportInfo
+from pydependence._core.module_imports_ast import load_imports_from_module_info
 
 # ========================================================================= #
 # MODULE IMPORTS                                                            #
@@ -40,7 +37,7 @@ from pydependence._core.module_imports_ast import (
 @dataclasses.dataclass
 class ModuleImports:
     module_info: ModuleMetadata
-    module_imports: "Dict[str, List[LocImportInfo]]"
+    module_imports: "dict[str, list[LocImportInfo]]"
 
     @classmethod
     def from_module_info_and_parsed_file(cls, module_info: ModuleMetadata):
@@ -57,12 +54,11 @@ class ModuleImports:
 
 
 class _ModuleImportsLoader:
-
     def __init__(self):
         # TODO: tag could severally hurt performance? maybe should change data structure slightly?
         #       problem is tag is nested and applied to imports too. HOWEVER, Usually tag is
         #       automatically generated from the package name, so might not matter too much in practice.
-        self._modules_imports: "Dict[Tuple[str, str], ModuleImports]" = {}
+        self._modules_imports: dict[tuple[str, str], ModuleImports] = {}
 
     def load_module_imports(self, module_info: ModuleMetadata) -> ModuleImports:
         k = (module_info.name, module_info.tag)
@@ -72,9 +68,7 @@ class _ModuleImportsLoader:
             self._modules_imports[k] = v
         else:
             if v.module_info != module_info:
-                raise RuntimeError(
-                    f"ModuleMetadata mismatch: {v.module_info} != {module_info}"
-                )
+                raise RuntimeError(f"ModuleMetadata mismatch: {v.module_info} != {module_info}")
         return v
 
 
