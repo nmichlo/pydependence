@@ -41,8 +41,19 @@ repos:
 
   # this repo dogfoods itself: regenerate `pyproject.toml`'s [project.dependencies] and
   # [project.optional-dependencies] from the actual imports in `pydependence/` and `tests/`.
-  - repo: https://github.com/nmichlo/pydependence
-    rev: v0.5.0
+  #
+  # a `local` hook rather than the published one. `python -m pydependence` puts CWD first
+  # on sys.path, so the published hook already ran the WORKING COPY inside a pinned
+  # release's environment -- and that environment predates the 3.12 floor, so the local
+  # `from enum import StrEnum` failed. Running the project venv directly is what was
+  # actually happening, minus the version skew.
+  - repo: local
     hooks:
       - id: pydependence
+        name: PyDependence
+        entry: .venv/bin/python -m pydependence
+        language: system
+        pass_filenames: false
+        always_run: true
+        verbose: true
         args: ["pyproject.toml"]
