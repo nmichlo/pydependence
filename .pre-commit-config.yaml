@@ -1,34 +1,46 @@
+# tool config lives in `pyproject.toml` (the `[tool.ruff]` and `[tool.ty]` sections).
+# CI runs this file verbatim, see `.github/workflows/lint.yaml`.
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v6.0.0
     hooks:
-      - id: check-added-large-files
-        args: ["--maxkb=500"]
-      - id: check-case-conflict
-      - id: detect-private-key
+      - { id: trailing-whitespace }
+      - { id: end-of-file-fixer }
+      - { id: check-yaml }
+      - { id: check-added-large-files, args: ["--maxkb=500"] }
+      - { id: check-case-conflict }
+      - { id: detect-private-key }
 
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.15.2
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.6
     hooks:
-      - id: pyupgrade
-        args:
-          - "--py38-plus"
+      - id: ruff-check
+        args: ["--fix"]
+      - id: ruff-format
 
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
+
+  # no `uv-lock` hook / committed `uv.lock`, and no `ty-pre-commit` hook (it shells out
+  # to `uv check`): pyproject.toml's bootstrapped `example-legacy` extra intentionally
+  # pins `pydantic<2`, which conflicts with the `pydantic>=2.0.0` in the base
+  # `[project.dependencies]`. Any `uv` command that resolves the full project (`uv lock`,
+  # `uv sync`, `uv check`) fails on this by design -- it is a demo of resolving
+  # conflicting `env=`-scoped versions, never meant to be installed as a real extra.
+  # Run `ty` directly instead, bypassing project resolution entirely.
+  - repo: local
     hooks:
-      - id: isort
-        name: isort
-        args: ["--verbose", "--py=39", "--profile=black"]
+      - id: ty
+        name: ty
+        entry: uvx ty@0.0.79 check
+        language: system
+        pass_filenames: false
+        always_run: true
+        # `ty` needs the project dependencies resolvable. it auto-detects `.venv`,
+        # so create one first:
+        #     uv venv --python 3.12 .venv && uv pip install --python .venv -e ".[test]"
 
-  - repo: https://github.com/psf/black
-    rev: 24.4.0
-    hooks:
-      - id: black
-        args: ["--verbose", "--target-version=py39"]
-
-  # this repo
+  # this repo dogfoods itself: regenerate `pyproject.toml`'s [project.dependencies] and
+  # [project.optional-dependencies] from the actual imports in `pydependence/` and `tests/`.
   - repo: https://github.com/nmichlo/pydependence
     rev: v0.5.0
     hooks:
